@@ -1,8 +1,11 @@
 package com.example.apprememberit
 
 import android.os.Bundle
-import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -40,21 +43,19 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 
-class RegisterActivity : AppCompatActivity() {
+class RecuperarActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent{
-            Register()
+            Recuperar()
         }
     }
 }
 
 @Preview
 @Composable
-fun Register() {
+fun Recuperar() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,45 +68,17 @@ fun Register() {
         )
 
         Text(
-            text = "Registrarte",
-            color = Color(android.graphics.Color.parseColor("#3b608c")),
+            text = "Recuperar contraseña",
+            color = Color(android.graphics.Color.parseColor("#Ea6d35")),
             modifier = Modifier.padding(top = 16.dp, start = 24.dp),
             fontSize = 40.sp,
             fontWeight = FontWeight.SemiBold
         )
 
-        var text_nombre by rememberSaveable { mutableStateOf(value = "") }
+        var text by rememberSaveable { mutableStateOf(value = "") }
 
         TextField(
-            value = text_nombre, onValueChange = { text_nombre = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.name), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(3.dp)
-                )
-            },
-            label = { Text(text = "Nombre", fontSize = 18.sp) },
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        var text_correo by rememberSaveable { mutableStateOf(value = "") }
-
-        TextField(
-            value = text_correo, onValueChange = { text_correo = it },
+            value = text, onValueChange = { text = it },
             leadingIcon = {
                 Image(
                     painter = painterResource(id = R.drawable.email), contentDescription = null,
@@ -130,45 +103,17 @@ fun Register() {
                 .background(Color.White, CircleShape)
         )
 
-
-        var text_contrasena by rememberSaveable { mutableStateOf(value = "") }
-        TextField(
-            value = text_contrasena, onValueChange = { text_contrasena = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.password), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(6.dp)
-                )
-            },
-            label = { Text(text = "Contraseña", fontSize = 18.sp) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
         Button(
             onClick = { /* Acción al hacer clic en el botón */ },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp, start = 24.dp, end = 24.dp)
                 .height(56.dp) // Ajustar la altura del botón para que coincida con los TextField
         ) {
-            Text(text = "Crear cuenta", color = Color.White, fontSize = 22.sp)
+            Text(text = "Enviar", color = Color.White, fontSize = 22.sp)
         }
+
 
         Row(
             modifier = Modifier
@@ -176,17 +121,16 @@ fun Register() {
                 .padding(top = 12.dp, start = 24.dp, end = 24.dp)
         ) {
             Text(
-                text = "¿Ya tienes una cuenta? Inicia sesión",
-                fontSize = 18.sp,
+                text = "Iniciar sesión",
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 40.dp)
+                    .padding(top = 150.dp)
                     .fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
-
-
     }
 }
+

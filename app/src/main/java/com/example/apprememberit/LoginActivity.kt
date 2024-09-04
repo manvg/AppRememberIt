@@ -47,117 +47,131 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent{
-            login()
+            Login()
         }
     }
+}
 
-    @Preview
-    @Composable
-    fun login() {
-        Column(
+@Preview
+@Composable
+fun Login() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.top_background1),
+            contentDescription = null
+        )
+
+        Text(
+            text = "Mi Cuenta",
+            color = Color(android.graphics.Color.parseColor("#Ea6d35")),
+            modifier = Modifier.padding(top = 16.dp, start = 24.dp),
+            fontSize = 40.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        var text by rememberSaveable { mutableStateOf(value = "") }
+
+        TextField(
+            value = text, onValueChange = { text = it },
+            leadingIcon = {
+                Image(
+                    painter = painterResource(id = R.drawable.email), contentDescription = null,
+                    modifier = Modifier
+                        .size(63.dp)
+                        .padding(start = 6.dp)
+                        .padding(3.dp)
+                )
+            },
+            label = { Text(text = "Correo electrónico", fontSize = 18.sp) },
+            shape = RoundedCornerShape(10.dp),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                backgroundColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
-                .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.top_background1),
-                contentDescription = null
-            )
+                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
+                .background(Color.White, CircleShape)
+        )
 
-            Text(
-                text = "Iniciar Sesión",
-                color = Color(android.graphics.Color.parseColor("#Ea6d35")),
-                modifier = Modifier.padding(top = 16.dp, start = 24.dp),
-                fontSize = 40.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            var text by rememberSaveable { mutableStateOf(value = "") }
-
-            TextField(
-                value = text, onValueChange = { text = it },
-                leadingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.email), contentDescription = null,
-                        modifier = Modifier
-                            .size(63.dp)
-                            .padding(start = 6.dp)
-                            .padding(3.dp)
-                    )
-                },
-                label = { Text(text = "Correo electrónico", fontSize = 18.sp) },
-                shape = RoundedCornerShape(10.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    backgroundColor = Color.White,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                    .background(Color.White, CircleShape)
-            )
-
-            var text2 by rememberSaveable { mutableStateOf(value = "") }
-            TextField(
-                value = text2, onValueChange = { text2 = it },
-                leadingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.password), contentDescription = null,
-                        modifier = Modifier
-                            .size(63.dp)
-                            .padding(start = 6.dp)
-                            .padding(6.dp)
-                    )
-                },
-                label = { Text(text = "Contraseña", fontSize = 18.sp) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                shape = RoundedCornerShape(10.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    backgroundColor = Color.White,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                    .background(Color.White, CircleShape)
-            )
-
-            Image(
-                painter = painterResource(id = R.drawable.btn_arraw1), contentDescription = null,
-                modifier = Modifier
-                    .width(80.dp)
-                    .padding(top = 24.dp)
-                    .align(Alignment.End)
-                    .clickable { }
-                    .padding(end = 24.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, start = 24.dp, end = 24.dp)
-            ) {
-                Text(
-                    text = "¿No tienes una cuenta? Regístrate",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+        var text2 by rememberSaveable { mutableStateOf(value = "") }
+        TextField(
+            value = text2, onValueChange = { text2 = it },
+            leadingIcon = {
+                Image(
+                    painter = painterResource(id = R.drawable.password), contentDescription = null,
                     modifier = Modifier
-                        .padding(top = 18.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    color = Color(android.graphics.Color.parseColor("#3b608c"))
+                        .size(63.dp)
+                        .padding(start = 6.dp)
+                        .padding(6.dp)
                 )
-            }
+            },
+            label = { Text(text = "Contraseña", fontSize = 18.sp) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            shape = RoundedCornerShape(10.dp),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                backgroundColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
+                .background(Color.White, CircleShape)
+        )
+        Button(
+            onClick = { /* Acción al hacer clic en el botón */ },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
+                .height(56.dp) // Ajustar la altura del botón para que coincida con los TextField
+        ) {
+            Text(text = "Iniciar sesión", color = Color.White, fontSize = 22.sp)
+        }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, start = 24.dp, end = 24.dp)
+        ) {
+            Text(
+                text = "¿No tienes una cuenta? Regístrate",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(top = 18.dp)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = Color(android.graphics.Color.parseColor("#3b608c"))
+            )
+        }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, start = 24.dp, end = 24.dp)
+        ) {
+            Text(
+                text = "¿Olvidaste tu contraseña?",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(top = 18.dp)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = Color(android.graphics.Color.parseColor("#3b608c"))
+            )
         }
     }
-
 }

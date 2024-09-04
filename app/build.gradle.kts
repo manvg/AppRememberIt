@@ -80,4 +80,5 @@ dependencies {
     implementation("com.google.code.gson:gson:2.8.9")
     implementation("androidx.security:security-crypto:1.1.0-alpha03")
     implementation(libs.gson)
+    implementation("androidx.compose.runtime:runtime-livedata:1.4.3")
 }
