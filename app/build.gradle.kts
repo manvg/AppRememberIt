@@ -81,4 +81,5 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha03")
     implementation(libs.gson)
     implementation("androidx.compose.runtime:runtime-livedata:1.4.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
 }

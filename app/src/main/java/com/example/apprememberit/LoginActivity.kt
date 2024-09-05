@@ -135,7 +135,7 @@ fun Login() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .height(56.dp) // Ajustar la altura del botón para que coincida con los TextField
+                .height(56.dp)
         ) {
             Text(text = "Iniciar sesión", color = Color.White, fontSize = 22.sp)
         }

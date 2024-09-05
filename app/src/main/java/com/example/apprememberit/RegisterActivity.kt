@@ -48,6 +48,10 @@ import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+data class Usuario(val nombre: String, val correo: String, val contrasena: String)
 
 class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,8 +92,6 @@ fun Register() {
             fontWeight = FontWeight.SemiBold
         )
 
-        var text_nombre by rememberSaveable { mutableStateOf(value = "") }
-
         TextField(
             value = text_nombre, onValueChange = { text_nombre = it },
             leadingIcon = {
@@ -115,8 +117,6 @@ fun Register() {
                 .padding(top = 16.dp, start = 24.dp, end = 24.dp)
                 .background(Color.White, CircleShape)
         )
-
-        var text_correo by rememberSaveable { mutableStateOf(value = "") }
 
         TextField(
             value = text_correo, onValueChange = { text_correo = it },
@@ -144,8 +144,6 @@ fun Register() {
                 .background(Color.White, CircleShape)
         )
 
-
-        var text_contrasena by rememberSaveable { mutableStateOf(value = "") }
         TextField(
             value = text_contrasena, onValueChange = { text_contrasena = it },
             leadingIcon = {
@@ -174,7 +172,7 @@ fun Register() {
         )
 
         Button(
-            onClick = {  guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
+            onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
             modifier = Modifier
                 .fillMaxWidth()
@@ -203,27 +201,40 @@ fun Register() {
     }
 }
 private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, correo: String, contrasena: String) {
-    val sharedPreferences = context.getSharedPreferences("userPrefs", Context.MODE_PRIVATE)
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("userPrefs", Context.MODE_PRIVATE)
+    val gson = Gson()
 
-    val existeEmail = sharedPreferences.getString("correo", null)
+    //Obtener lista de usuarios
+    val jsonListaUsuarios = sharedPreferences.getString("listaUsuarios", null)
+    val listaUsuariosTipo = object : TypeToken<MutableList<Usuario>>() {}.type
 
-    if (existeEmail == correo) {
-        Toast.makeText(context, "El usuario con este correo ya existe.", Toast.LENGTH_LONG).show()
+    val listaUsuarios: MutableList<Usuario> = if (jsonListaUsuarios != null) {
+        gson.fromJson(jsonListaUsuarios, listaUsuariosTipo)
     } else {
-        val editor = sharedPreferences.edit()
-        editor.putString("nombre", nombre)
-        editor.putString("correo", correo)
-        editor.putString("contrasena", contrasena)
+        mutableListOf()
+    }
+
+    val existeEmail = listaUsuarios.any { it.correo == correo }
+
+    if (existeEmail) {
+        Toast.makeText(context, "Ya existe un usuario con este correo electrónico.", Toast.LENGTH_LONG).show()
+    } else {
+        //Crear un nuevo usuario y añadirlo a la lista
+        val nuevoUsuario = Usuario(nombre, correo, contrasena)
+        listaUsuarios.add(nuevoUsuario)
+
         //Guardar
+        val editor = sharedPreferences.edit()
+        val jsonActualizado = gson.toJson(listaUsuarios)
+        editor.putString("listaUsuarios", jsonActualizado)
         editor.apply()
 
-        //Mostrar mensaje de éxito
         val builder = AlertDialog.Builder(context)
         builder.setTitle("Éxito")
         builder.setMessage("Cuenta creada correctamente.")
         builder.setPositiveButton("Aceptar") { dialog, _ ->
             dialog.dismiss()
-            //Redireccionar a MainActivity después de cerrar el pop-up
+
             val intent = Intent(context, MainActivity::class.java)
             context.startActivity(intent)
         }

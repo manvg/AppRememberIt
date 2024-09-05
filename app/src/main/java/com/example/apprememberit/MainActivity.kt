@@ -68,6 +68,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
+import com.example.apprememberit.ViewModel.RecordatorioViewModel
 
 
 class MainActivity : AppCompatActivity() {
@@ -81,15 +84,7 @@ class MainActivity : AppCompatActivity() {
 
 @Preview
 @Composable
-fun Dashboard() {
-    // Lista mutable de recordatorios para poder eliminar y editar
-    var recordatorios by rememberSaveable { mutableStateOf(
-        mutableListOf(
-            Recordatorio("Toma de Medicamento", "Ibuprofeno", "13/09/2023", "08:00", "usuario1@gmail.com"),
-            Recordatorio("Cita Médica", "Consulta Dr. Pérez", "14/09/2023", "10:00", "usuario1@gmail.com")
-        )
-    ) }
-
+fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
 
@@ -196,14 +191,13 @@ fun Dashboard() {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(16.dp)
         )
-
-        // Lista de recordatorios
+        // Lista de recordatorios desde el ViewModel
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(recordatorios) { recordatorio ->
+            items(viewModel.recordatorios) { recordatorio ->
                 RecordatorioCard(
                     recordatorio = recordatorio,
                     onDelete = {
@@ -224,11 +218,10 @@ fun Dashboard() {
                 recordatorio = recordatorio,
                 onDismiss = { recordatorioEditando = null },
                 onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
-                    recordatorios = recordatorios.map {
-                        if (it == recordatorio) {
-                            it.copy(titulo = nuevoTitulo, descripcion = nuevaDescripcion, fecha = nuevaFecha, hora = nuevaHora)
-                        } else it
-                    }.toMutableList()
+                    viewModel.actualizarRecordatorio(
+                        recordatorio,
+                        Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, recordatorio.emailUsuario)
+                    )
                     recordatorioEditando = null
                 }
             )
@@ -238,7 +231,7 @@ fun Dashboard() {
         recordatorioAEliminar?.let { recordatorio ->
             ConfirmDeleteDialog(
                 onConfirm = {
-                    recordatorios = recordatorios.filter { it != recordatorio }.toMutableList()
+                    viewModel.eliminarRecordatorio(recordatorio)
                     recordatorioAEliminar = null
                 },
                 onDismiss = {
@@ -246,6 +239,8 @@ fun Dashboard() {
                 }
             )
         }
+
+
     }
 }
 
