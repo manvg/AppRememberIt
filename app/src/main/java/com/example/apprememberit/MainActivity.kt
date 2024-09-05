@@ -34,15 +34,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Card
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.getValue
@@ -53,6 +64,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -61,12 +73,6 @@ import androidx.constraintlayout.compose.ConstraintLayout
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
         setContent{
             Dashboard()
         }
@@ -76,6 +82,17 @@ class MainActivity : AppCompatActivity() {
 @Preview
 @Composable
 fun Dashboard() {
+    // Lista mutable de recordatorios para poder eliminar y editar
+    var recordatorios by rememberSaveable { mutableStateOf(
+        mutableListOf(
+            Recordatorio("Toma de Medicamento", "Ibuprofeno", "13/09/2023", "08:00", "usuario1@gmail.com"),
+            Recordatorio("Cita Médica", "Consulta Dr. Pérez", "14/09/2023", "10:00", "usuario1@gmail.com")
+        )
+    ) }
+
+    var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
+    var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
+
     Column(
         Modifier
             .fillMaxHeight()
@@ -83,24 +100,25 @@ fun Dashboard() {
             .background(color = Color(android.graphics.Color.parseColor("#f8eeec"))),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        ConstraintLayout{
+        ConstraintLayout {
             val (topImg, profile) = createRefs()
-            Box (Modifier
-                 .fillMaxWidth()
-                 .height(245.dp)
-                 .constrainAs(topImg) {
-                    top.linkTo(parent.top)
-                    start.linkTo(parent.start)
-                 }
-
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(android.graphics.Color.parseColor("#EA6D35")),
-                            Color(android.graphics.Color.parseColor("#3b608c"))
-                        )
-                    ),shape = RoundedCornerShape(bottomEnd = 40.dp, bottomStart = 40.dp)
-                )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(245.dp)
+                    .constrainAs(topImg) {
+                        top.linkTo(parent.top)
+                        start.linkTo(parent.start)
+                    }
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(android.graphics.Color.parseColor("#EA6D35")),
+                                Color(android.graphics.Color.parseColor("#3b608c"))
+                            )
+                        ),
+                        shape = RoundedCornerShape(bottomEnd = 40.dp, bottomStart = 40.dp)
+                    )
             )
             Row(
                 modifier = Modifier
@@ -111,7 +129,8 @@ fun Dashboard() {
                     modifier = Modifier
                         .height(100.dp)
                         .padding(start = 14.dp)
-                        .weight(0.7f), verticalArrangement = Arrangement.Center,
+                        .weight(0.7f),
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.Start
                 ) {
                     Text(
@@ -124,9 +143,7 @@ fun Dashboard() {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 14.dp)
                     )
-
                 }
-
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -145,31 +162,7 @@ fun Dashboard() {
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(top = 12.dp, bottom = 12.dp, end = 8.dp, start = 8.dp)
-                        .height(90.dp)
-                        .width(90.dp)
-                        .background(
-                            color = Color(android.graphics.Color.parseColor("#ffe0c8")),
-                            shape = RoundedCornerShape(20.dp)
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_8),
-                        contentDescription = null,
-                        Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                    Text(
-                        text = "Menú",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontStyle = FontStyle.Italic,
-                        color = Color(android.graphics.Color.parseColor("#c77710"))
-                    )
-                }
-                Column(
-                    modifier = Modifier
-                        .padding(top = 12.dp, bottom = 12.dp, start = 8.dp)
+                        .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
                         .height(90.dp)
                         .width(90.dp)
                         .background(
@@ -192,14 +185,219 @@ fun Dashboard() {
                     )
                 }
             }
-
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
 
+        // Panel de recordatorios
+        Text(
+            text = "Tus Recordatorios",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(16.dp)
+        )
 
+        // Lista de recordatorios
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(recordatorios) { recordatorio ->
+                RecordatorioCard(
+                    recordatorio = recordatorio,
+                    onDelete = {
+                        // Mostrar cuadro de confirmación antes de eliminar
+                        recordatorioAEliminar = recordatorio
+                    },
+                    onEdit = {
+                        // Marcar el recordatorio como editando
+                        recordatorioEditando = recordatorio
+                    }
+                )
+            }
+        }
 
+        // Si hay un recordatorio en modo edición, mostrar el diálogo para editarlo
+        recordatorioEditando?.let { recordatorio ->
+            EditRecordatorioDialog(
+                recordatorio = recordatorio,
+                onDismiss = { recordatorioEditando = null },
+                onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
+                    recordatorios = recordatorios.map {
+                        if (it == recordatorio) {
+                            it.copy(titulo = nuevoTitulo, descripcion = nuevaDescripcion, fecha = nuevaFecha, hora = nuevaHora)
+                        } else it
+                    }.toMutableList()
+                    recordatorioEditando = null
+                }
+            )
+        }
 
-
+        // Si hay un recordatorio marcado para eliminar, mostrar el cuadro de confirmación
+        recordatorioAEliminar?.let { recordatorio ->
+            ConfirmDeleteDialog(
+                onConfirm = {
+                    recordatorios = recordatorios.filter { it != recordatorio }.toMutableList()
+                    recordatorioAEliminar = null
+                },
+                onDismiss = {
+                    recordatorioAEliminar = null
+                }
+            )
+        }
     }
-
 }
+
+// Definición de la data class para los recordatorios
+data class Recordatorio(val titulo: String, val descripcion: String, val fecha: String, val hora: String, val emailUsuario: String)
+
+@Composable
+fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        elevation = 4.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(16.dp)
+        ) {
+            Text(text = recordatorio.titulo, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(text = recordatorio.descripcion, fontSize = 16.sp, color = Color.Gray)
+            Text(text = "Fecha: ${recordatorio.fecha} - Hora: ${recordatorio.hora}", fontSize = 14.sp, color = Color.Gray)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDelete) {
+                    Text(text = "Eliminar", color = Color.Red)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onEdit) {
+                    Text(text = "Editar", color = Color(android.graphics.Color.parseColor("#3b608c")))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Confirmar Eliminación", fontSize = 20.sp, color = Color.Red)
+        },
+        text = {
+            Text(text = "¿Estás seguro de que deseas eliminar este recordatorio?")
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
+            ) {
+                Text(text = "Eliminar", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancelar", color = Color.Gray)
+            }
+        }
+    )
+}
+
+
+@Composable
+fun EditRecordatorioDialog(
+    recordatorio: Recordatorio,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String) -> Unit
+) {
+    var titulo by rememberSaveable { mutableStateOf(recordatorio.titulo) }
+    var descripcion by rememberSaveable { mutableStateOf(recordatorio.descripcion) }
+    var fecha by rememberSaveable { mutableStateOf(recordatorio.fecha) }
+    var hora by rememberSaveable { mutableStateOf(recordatorio.hora) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Nuevo Recordatorio",
+                fontSize = 20.sp,
+                color = Color(android.graphics.Color.parseColor("#Ea6d35"))
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Campo de Título
+                OutlinedTextField(
+                    value = titulo,
+                    onValueChange = { titulo = it },
+                    label = { Text(text = "Título") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Campo de Descripción
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text(text = "Descripción") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Campo de Fecha
+                OutlinedTextField(
+                    value = fecha,
+                    onValueChange = { fecha = it },
+                    label = { Text(text = "Fecha") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Campo de Hora
+                OutlinedTextField(
+                    value = hora,
+                    onValueChange = { hora = it },
+                    label = { Text(text = "Hora") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(titulo, descripcion, fecha, hora) // Guardar los datos y cerrar
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            ) {
+                Text(text = "Guardar", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            ) {
+                Text(
+                    text = "Cancelar",
+                    color = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            }
+        }
+    )
+}
+

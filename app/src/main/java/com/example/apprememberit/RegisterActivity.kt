@@ -42,6 +42,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 
 class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +61,14 @@ class RegisterActivity : AppCompatActivity() {
 @Preview
 @Composable
 fun Register() {
+    // Obtenemos el contexto dentro de una función composable
+    val context = LocalContext.current
+
+    // Variables para almacenar los valores del formulario
+    var text_nombre by rememberSaveable { mutableStateOf("") }
+    var text_correo by rememberSaveable { mutableStateOf("") }
+    var text_contrasena by rememberSaveable { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -70,7 +84,7 @@ fun Register() {
             text = "Registrarte",
             color = Color(android.graphics.Color.parseColor("#3b608c")),
             modifier = Modifier.padding(top = 16.dp, start = 24.dp),
-            fontSize = 40.sp,
+            fontSize = 48.sp,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -87,7 +101,7 @@ fun Register() {
                         .padding(3.dp)
                 )
             },
-            label = { Text(text = "Nombre", fontSize = 18.sp) },
+            label = { Text(text = "Nombre", fontSize = 20.sp) },
             shape = RoundedCornerShape(10.dp),
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 backgroundColor = Color.White,
@@ -115,7 +129,7 @@ fun Register() {
                         .padding(3.dp)
                 )
             },
-            label = { Text(text = "Correo electrónico", fontSize = 18.sp) },
+            label = { Text(text = "Correo electrónico", fontSize = 20.sp) },
             shape = RoundedCornerShape(10.dp),
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 backgroundColor = Color.White,
@@ -143,7 +157,7 @@ fun Register() {
                         .padding(6.dp)
                 )
             },
-            label = { Text(text = "Contraseña", fontSize = 18.sp) },
+            label = { Text(text = "Contraseña", fontSize = 20.sp) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             shape = RoundedCornerShape(10.dp),
             colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -160,14 +174,14 @@ fun Register() {
         )
 
         Button(
-            onClick = { /* Acción al hacer clic en el botón */ },
+            onClick = {  guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .height(56.dp) // Ajustar la altura del botón para que coincida con los TextField
+                .height(56.dp)
         ) {
-            Text(text = "Crear cuenta", color = Color.White, fontSize = 22.sp)
+            Text(text = "Crear cuenta", color = Color.White, fontSize = 28.sp)
         }
 
         Row(
@@ -177,7 +191,7 @@ fun Register() {
         ) {
             Text(
                 text = "¿Ya tienes una cuenta? Inicia sesión",
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .padding(top = 40.dp)
@@ -186,7 +200,35 @@ fun Register() {
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
-
-
     }
 }
+private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, correo: String, contrasena: String) {
+    val sharedPreferences = context.getSharedPreferences("userPrefs", Context.MODE_PRIVATE)
+
+    val existeEmail = sharedPreferences.getString("correo", null)
+
+    if (existeEmail == correo) {
+        Toast.makeText(context, "El usuario con este correo ya existe.", Toast.LENGTH_LONG).show()
+    } else {
+        val editor = sharedPreferences.edit()
+        editor.putString("nombre", nombre)
+        editor.putString("correo", correo)
+        editor.putString("contrasena", contrasena)
+        //Guardar
+        editor.apply()
+
+        //Mostrar mensaje de éxito
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Éxito")
+        builder.setMessage("Cuenta creada correctamente.")
+        builder.setPositiveButton("Aceptar") { dialog, _ ->
+            dialog.dismiss()
+            //Redireccionar a MainActivity después de cerrar el pop-up
+            val intent = Intent(context, MainActivity::class.java)
+            context.startActivity(intent)
+        }
+        builder.setCancelable(false)
+        builder.show()
+    }
+}
+
