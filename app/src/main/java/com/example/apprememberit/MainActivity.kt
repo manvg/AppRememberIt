@@ -51,11 +51,15 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
+import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.Icon
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -87,164 +91,189 @@ class MainActivity : AppCompatActivity() {
 fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
+    var mostrarNuevoRecordatorio by rememberSaveable { mutableStateOf(false) }
 
-    Column(
-        Modifier
-            .fillMaxHeight()
-            .fillMaxWidth()
-            .background(color = Color(android.graphics.Color.parseColor("#f8eeec"))),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
     ) {
-        ConstraintLayout {
-            val (topImg, profile) = createRefs()
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(245.dp)
-                    .constrainAs(topImg) {
-                        top.linkTo(parent.top)
-                        start.linkTo(parent.start)
-                    }
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(android.graphics.Color.parseColor("#EA6D35")),
-                                Color(android.graphics.Color.parseColor("#3b608c"))
-                            )
-                        ),
-                        shape = RoundedCornerShape(bottomEnd = 40.dp, bottomStart = 40.dp)
-                    )
-            )
-            Row(
-                modifier = Modifier
-                    .padding(top = 48.dp, start = 24.dp, end = 24.dp)
-                    .fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .height(100.dp)
-                        .padding(start = 14.dp)
-                        .weight(0.7f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = "Bienvenido", color = Color.White, fontSize = 18.sp
-                    )
-                    Text(
-                        text = "{Nombre de usuario}",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 14.dp)
-                    )
-                }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp, start = 24.dp, end = 24.dp)
-                    .shadow(3.dp, shape = RoundedCornerShape(20.dp))
-                    .background(color = Color.White, shape = RoundedCornerShape(20.dp))
-                    .constrainAs(profile) {
-                        top.linkTo(topImg.bottom)
-                        bottom.linkTo(topImg.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
-                        .height(90.dp)
-                        .width(90.dp)
-                        .background(
-                            color = Color(android.graphics.Color.parseColor("#ffe0c8")),
-                            shape = RoundedCornerShape(20.dp)
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_7),
-                        contentDescription = null,
-                        Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-                    Text(
-                        text = "Ajustes",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontStyle = FontStyle.Italic,
-                        color = Color(android.graphics.Color.parseColor("#c77710"))
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Panel de recordatorios
-        Text(
-            text = "Tus Recordatorios",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(16.dp)
-        )
-        // Lista de recordatorios desde el ViewModel
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            items(viewModel.recordatorios) { recordatorio ->
-                RecordatorioCard(
+            ConstraintLayout {
+                val (topImg, profile) = createRefs()
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(245.dp)
+                        .constrainAs(topImg) {
+                            top.linkTo(parent.top)
+                            start.linkTo(parent.start)
+                        }
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(android.graphics.Color.parseColor("#EA6D35")),
+                                    Color(android.graphics.Color.parseColor("#3b608c"))
+                                )
+                            ),
+                            shape = RoundedCornerShape(bottomEnd = 40.dp, bottomStart = 40.dp)
+                        )
+                )
+                Row(
+                    modifier = Modifier
+                        .padding(top = 48.dp, start = 24.dp, end = 24.dp)
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .height(100.dp)
+                            .padding(start = 14.dp)
+                            .weight(0.7f),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = "Bienvenido", color = Color.White, fontSize = 18.sp
+                        )
+                        Text(
+                            text = "{Nombre de usuario}",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 14.dp)
+                        )
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp, start = 24.dp, end = 24.dp)
+                        .shadow(3.dp, shape = RoundedCornerShape(20.dp))
+                        .background(color = Color.White, shape = RoundedCornerShape(20.dp))
+                        .constrainAs(profile) {
+                            top.linkTo(topImg.bottom)
+                            bottom.linkTo(topImg.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
+                            .height(90.dp)
+                            .width(90.dp)
+                            .background(
+                                color = Color(android.graphics.Color.parseColor("#ffe0c8")),
+                                shape = RoundedCornerShape(20.dp)
+                            ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_7),
+                            contentDescription = null,
+                            Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        )
+                        Text(
+                            text = "Ajustes",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                            color = Color(android.graphics.Color.parseColor("#c77710"))
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Tus Recordatorios",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp)
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(viewModel.recordatorios) { recordatorio ->
+                    RecordatorioCard(
+                        recordatorio = recordatorio,
+                        onDelete = {
+                            recordatorioAEliminar = recordatorio
+                        },
+                        onEdit = {
+                            recordatorioEditando = recordatorio
+                        }
+                    )
+                }
+            }
+
+            recordatorioEditando?.let { recordatorio ->
+                EditRecordatorioDialog(
                     recordatorio = recordatorio,
-                    onDelete = {
-                        // Mostrar cuadro de confirmación antes de eliminar
-                        recordatorioAEliminar = recordatorio
+                    onDismiss = { recordatorioEditando = null },
+                    onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
+                        viewModel.actualizarRecordatorio(
+                            recordatorio,
+                            Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, recordatorio.emailUsuario)
+                        )
+                        recordatorioEditando = null
+                    }
+                )
+            }
+
+            recordatorioAEliminar?.let { recordatorio ->
+                ConfirmDeleteDialog(
+                    onConfirm = {
+                        viewModel.eliminarRecordatorio(recordatorio)
+                        recordatorioAEliminar = null
                     },
-                    onEdit = {
-                        // Marcar el recordatorio como editando
-                        recordatorioEditando = recordatorio
+                    onDismiss = {
+                        recordatorioAEliminar = null
                     }
                 )
             }
         }
 
-        // Si hay un recordatorio en modo edición, mostrar el diálogo para editarlo
-        recordatorioEditando?.let { recordatorio ->
-            EditRecordatorioDialog(
-                recordatorio = recordatorio,
-                onDismiss = { recordatorioEditando = null },
+        if (mostrarNuevoRecordatorio) {
+            NuevoRecordatorioDialog(
+                onDismiss = { mostrarNuevoRecordatorio = false },
                 onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
-                    viewModel.actualizarRecordatorio(
-                        recordatorio,
-                        Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, recordatorio.emailUsuario)
+                    // Lógica para agregar el nuevo recordatorio al ViewModel
+                    viewModel.agregarRecordatorio(
+                        Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, "usuario@example.com")
                     )
-                    recordatorioEditando = null
+                    mostrarNuevoRecordatorio = false
                 }
             )
         }
 
-        // Si hay un recordatorio marcado para eliminar, mostrar el cuadro de confirmación
-        recordatorioAEliminar?.let { recordatorio ->
-            ConfirmDeleteDialog(
-                onConfirm = {
-                    viewModel.eliminarRecordatorio(recordatorio)
-                    recordatorioAEliminar = null
-                },
-                onDismiss = {
-                    recordatorioAEliminar = null
-                }
-            )
+        FloatingActionButton(
+            onClick = {
+                mostrarNuevoRecordatorio = true // Muestra el formulario al hacer clic
+            },
+            backgroundColor = Color(android.graphics.Color.parseColor("#EA6D35")),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar")
         }
 
 
     }
 }
 
-// Definición de la data class para los recordatorios
 data class Recordatorio(val titulo: String, val descripcion: String, val fecha: String, val hora: String, val emailUsuario: String)
 
 @Composable
@@ -323,7 +352,7 @@ fun EditRecordatorioDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Nuevo Recordatorio",
+                text = "Editar Recordatorio",
                 fontSize = 20.sp,
                 color = Color(android.graphics.Color.parseColor("#Ea6d35"))
             )
@@ -333,7 +362,6 @@ fun EditRecordatorioDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Campo de Título
                 OutlinedTextField(
                     value = titulo,
                     onValueChange = { titulo = it },
@@ -341,7 +369,6 @@ fun EditRecordatorioDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Campo de Descripción
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -349,7 +376,6 @@ fun EditRecordatorioDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Campo de Fecha
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { fecha = it },
@@ -371,7 +397,7 @@ fun EditRecordatorioDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(titulo, descripcion, fecha, hora) // Guardar los datos y cerrar
+                    onSave(titulo, descripcion, fecha, hora)
                 },
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
@@ -396,3 +422,85 @@ fun EditRecordatorioDialog(
     )
 }
 
+@Composable
+fun NuevoRecordatorioDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String) -> Unit
+) {
+    var titulo by rememberSaveable { mutableStateOf("") }
+    var descripcion by rememberSaveable { mutableStateOf("") }
+    var fecha by rememberSaveable { mutableStateOf("") }
+    var hora by rememberSaveable { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Nuevo Recordatorio",
+                fontSize = 20.sp,
+                color = Color(android.graphics.Color.parseColor("#Ea6d35"))
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = titulo,
+                    onValueChange = { titulo = it },
+                    label = { Text(text = "Título") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text(text = "Descripción") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = fecha,
+                    onValueChange = { fecha = it },
+                    label = { Text(text = "Fecha") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = hora,
+                    onValueChange = { hora = it },
+                    label = { Text(text = "Hora") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(titulo, descripcion, fecha, hora)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            ) {
+                Text(text = "Guardar", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            ) {
+                Text(
+                    text = "Cancelar",
+                    color = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                )
+            }
+        }
+    )
+}
