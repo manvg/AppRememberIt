@@ -58,12 +58,22 @@ class LoginActivity : AppCompatActivity() {
     }
 }
 
-@Preview
 @Composable
 fun Login() {
+    val context = LocalContext.current
+
+    // Verificar si el usuario tiene una sesión activa
+    val usuarioSesion = getUsuarioSesion(context)
+
+    if (usuarioSesion != null && usuarioSesion.isActive) {
+        // Si el usuario está activo, redirigir a MainActivity
+        val intent = Intent(context, MainActivity::class.java)
+        context.startActivity(intent)
+        return
+    }
+
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -209,9 +219,9 @@ fun Login() {
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
-
     }
 }
+
 private fun iniciarSesion(context: Context, email: String, contrasena: String) {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val gson = Gson()
@@ -258,3 +268,16 @@ data class UsuarioSesion(
     val contrasena: String,
     val isActive: Boolean
 )
+
+private fun getUsuarioSesion(context: Context): UsuarioSesion? {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val gson = Gson()
+
+    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)
+
+    return if (usuarioSesionJson == null) {
+        null
+    } else {
+        gson.fromJson(usuarioSesionJson, UsuarioSesion::class.java)
+    }
+}
