@@ -6,12 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,39 +17,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester.Companion.createRefs
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-//import androidx.compose.ui.node.CanFocusChecker.start //COMTENTADO TEMPORALMENTE
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import kotlinx.coroutines.NonDisposableHandle.parent
-
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -59,16 +39,15 @@ import androidx.compose.material.Card
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.getValue
@@ -81,14 +60,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.unit.dp
 import com.example.apprememberit.ViewModel.RecordatorioViewModel
 import com.google.gson.Gson
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 
@@ -96,22 +74,37 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent{
-            Dashboard()
+            Dashboard(context = this)
         }
     }
 }
 
-@Preview
 @Composable
-fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
+fun Dashboard(context: Context) {
+    val viewModel: RecordatorioViewModel = remember {
+        RecordatorioViewModel(context)
+    }
+
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var mostrarNuevoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var mensajeBienvenida by remember { mutableStateOf("Bienvenido") }
 
-    val context = LocalContext.current
     val usuarioSesion = getUsuarioSesion(context)
 
+    if (usuarioSesion != null) {
+        mensajeBienvenida = "Hola, ${usuarioSesion.nombre}"
+    }
+
+    // Filtrar los recordatorios dependiendo del estado de la sesión. Ordenar por fecha
+    val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
+    val recordatorios = if (usuarioSesion != null) {
+        viewModel.obtenerRecordatoriosPorEmail(usuarioSesion.email)
+    } else {
+        viewModel.obtenerRecordatoriosPorEmail(null)
+    }.sortedBy { recordatorio ->
+        LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
+    }
 
     Box(
         modifier = Modifier
@@ -120,9 +113,7 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
     ) {
         Column(
             Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
         ) {
             ConstraintLayout {
                 val (topImg, profile) = createRefs()
@@ -206,41 +197,62 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
                 text = "Tus Recordatorios",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(viewModel.recordatorios) { recordatorio ->
-                    RecordatorioCard(
-                        recordatorio = recordatorio,
-                        onDelete = {
-                            recordatorioAEliminar = recordatorio
-                        },
-                        onEdit = {
-                            recordatorioEditando = recordatorio
-                        }
-                    )
+
+            if (recordatorios.isEmpty()) {
+                //Mostrar mensaje cuando no haya recordatorios
+                Text(
+                    text = "No tienes recordatorios. ¡Agrega uno nuevo!",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.CenterHorizontally)
+                )
+            } else {
+                //Mostrar la lista de recordatorios si existen
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(recordatorios) { recordatorio ->
+                        RecordatorioCard(
+                            recordatorio = recordatorio,
+                            onDelete = {
+                                recordatorioAEliminar = recordatorio
+                            },
+                            onEdit = {
+                                recordatorioEditando = recordatorio
+                            }
+                        )
+                    }
                 }
             }
 
+            //Edición recordatorio
             recordatorioEditando?.let { recordatorio ->
                 EditRecordatorioDialog(
                     recordatorio = recordatorio,
                     onDismiss = { recordatorioEditando = null },
-                    onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
-                        viewModel.actualizarRecordatorio(
-                            recordatorio,
-                            Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, recordatorio.emailUsuario)
-                        )
+                    viewModel = viewModel,
+                    onSave = {
                         recordatorioEditando = null
                     }
                 )
             }
 
+            //Eliminación recordatorio
             recordatorioAEliminar?.let { recordatorio ->
                 ConfirmDeleteDialog(
                     onConfirm = {
@@ -254,21 +266,21 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
             }
         }
 
+        //Nuevo recordatorio
         if (mostrarNuevoRecordatorio) {
             NuevoRecordatorioDialog(
                 onDismiss = { mostrarNuevoRecordatorio = false },
-                onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
-                    viewModel.agregarRecordatorio(
-                        Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, "usuario@example.com")
-                    )
+                viewModel = viewModel,
+                emailUsuario = usuarioSesion?.email,
+                onSave = {
                     mostrarNuevoRecordatorio = false
                 }
             )
         }
-
+        //Botón "Nuevo" para agregar recordatorios
         ExtendedFloatingActionButton(
             onClick = {
-                mostrarNuevoRecordatorio = true // Muestra el formulario al hacer clic
+                mostrarNuevoRecordatorio = true
             },
             backgroundColor = Color(android.graphics.Color.parseColor("#EA6D35")),
             modifier = Modifier
@@ -297,6 +309,7 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
 }
 
 
+//----------Panel de recordatorios----------//
 data class Recordatorio(val titulo: String, val descripcion: String, val fecha: String, val hora: String, val emailUsuario: String)
 
 @Composable
@@ -315,7 +328,7 @@ fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: (
         ) {
             Text(text = recordatorio.titulo, fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Text(text = recordatorio.descripcion, fontSize = 23.sp, color = Color.Gray)
-            Text(text = "Fecha: ${recordatorio.fecha} - Hora: ${recordatorio.hora}", fontSize = 22.sp, color = Color.Gray)
+            Text(text = "Fecha: ${recordatorio.fecha} - ${recordatorio.hora}", fontSize = 22.sp, color = Color.Gray)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -347,9 +360,10 @@ fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: (
     }
 }
 
-
+//----------Dialog "Confirmar Eliminación"----------//
 @Composable
-fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit)
+{
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -374,17 +388,15 @@ fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     )
 }
 
-
+//----------Dialog "Editar Recordatorio"----------//
 @Composable
-fun EditRecordatorioDialog(
-    recordatorio: Recordatorio,
-    onDismiss: () -> Unit,
-    onSave: (String, String, String, String) -> Unit
-) {
-    var titulo by rememberSaveable { mutableStateOf(recordatorio.titulo) }
+fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, viewModel: RecordatorioViewModel, onSave: () -> Unit)
+{
+    var categoriaSeleccionada by rememberSaveable { mutableStateOf(recordatorio.titulo) } // Inicializa con el título original
     var descripcion by rememberSaveable { mutableStateOf(recordatorio.descripcion) }
     var fecha by rememberSaveable { mutableStateOf(recordatorio.fecha) }
     var hora by rememberSaveable { mutableStateOf(recordatorio.hora) }
+    var expanded by remember { mutableStateOf(false) } // Control del Dropdown
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
@@ -423,13 +435,38 @@ fun EditRecordatorioDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = titulo,
-                    onValueChange = { titulo = it },
-                    label = { Text(text = "Título") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                //Selector de categorías de recordatorios
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = categoriaSeleccionada,
+                        onValueChange = {},
+                        label = { Text("Categoría") },
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { expanded = !expanded }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        viewModel.categorias.forEach { categoria ->//Obtener categorías desde ViewModel
+                            DropdownMenuItem(onClick = {
+                                categoriaSeleccionada = categoria
+                                expanded = false
+                            }) {
+                                Text(text = categoria)
+                            }
+                        }
+                    }
+                }
 
+                //Campo "Descripción"
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -437,6 +474,7 @@ fun EditRecordatorioDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                //Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { },
@@ -449,7 +487,7 @@ fun EditRecordatorioDialog(
                         }
                 )
 
-                // Campo de selección de hora
+                //Campo "Hora"
                 OutlinedTextField(
                     value = hora,
                     onValueChange = { },
@@ -466,7 +504,14 @@ fun EditRecordatorioDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(titulo, descripcion, fecha, hora)
+                    val nuevoRecordatorio = recordatorio.copy(
+                        titulo = categoriaSeleccionada,
+                        descripcion = descripcion,
+                        fecha = fecha,
+                        hora = hora
+                    )
+                    viewModel.actualizarRecordatorio(recordatorio, nuevoRecordatorio) //Modificar recordatorio
+                    onSave()
                 },
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
@@ -491,16 +536,15 @@ fun EditRecordatorioDialog(
     )
 }
 
-
+//----------Dialog "Nuevo Recordatorio"----------//
 @Composable
-fun NuevoRecordatorioDialog(
-    onDismiss: () -> Unit,
-    onSave: (String, String, String, String) -> Unit
-) {
-    var titulo by rememberSaveable { mutableStateOf("") }
+fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: RecordatorioViewModel, emailUsuario: String?, onSave: () -> Unit)
+{
+    var categoriaSeleccionada by rememberSaveable { mutableStateOf("Seleccione") }
     var descripcion by rememberSaveable { mutableStateOf("") }
     var fecha by rememberSaveable { mutableStateOf("") }
     var hora by rememberSaveable { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -540,20 +584,45 @@ fun NuevoRecordatorioDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = titulo,
-                    onValueChange = { titulo = it },
-                    label = { Text(text = "Título") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                //Selector categorías de recordatorios
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = categoriaSeleccionada,
+                        onValueChange = {},
+                        label = { Text("Categoría") },
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { expanded = !expanded }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        viewModel.categorias.forEach { categoria -> //Obtener categorías desde ViewModel
+                            DropdownMenuItem(onClick = {
+                                categoriaSeleccionada = categoria
+                                expanded = false
+                            }) {
+                                Text(text = categoria)
+                            }
+                        }
+                    }
+                }
 
+                //Campo "Descripción"
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
                     label = { Text(text = "Descripción") },
                     modifier = Modifier.fillMaxWidth()
                 )
-
+                //Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { },
@@ -565,7 +634,7 @@ fun NuevoRecordatorioDialog(
                             datePickerDialog.show()
                         }
                 )
-
+                //Campo "Hora"
                 OutlinedTextField(
                     value = hora,
                     onValueChange = { },
@@ -582,8 +651,18 @@ fun NuevoRecordatorioDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(titulo, descripcion, fecha, hora)
+                    //Guardar el nuevo recordatorio en el ViewModel
+                    val nuevoRecordatorio = Recordatorio(
+                        titulo = categoriaSeleccionada,
+                        descripcion = descripcion,
+                        fecha = fecha,
+                        hora = hora,
+                        emailUsuario = emailUsuario ?: ""
+                    )
+                    viewModel.agregarRecordatorio(nuevoRecordatorio)
+                    onSave()//Guardar
                 },
+                enabled = categoriaSeleccionada != "Seleccione",
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
                 )
@@ -607,25 +686,21 @@ fun NuevoRecordatorioDialog(
     )
 }
 
-
-
+//----------Menú "Ajustes"----------//
 @Composable
-fun AbrirMenu(
-    context: Context, // Agregamos el contexto para acceder a SharedPreferences
-    onLogout: () -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit
+fun AbrirMenu(context: Context, onLogout: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-
-    // Obtener la información de usuarioSesion de SharedPreferences
-    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)//Obtener datos almacenados localmente
     val gson = Gson()
-    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)
+    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)//Datos sesión usuario
     val usuarioSesion = usuarioSesionJson?.let {
         gson.fromJson(it, UsuarioSesion::class.java)
     }
 
+    //Las opciones a mostrar en el menú dependen del estado de la sesión.
+    //1)Usuario activo, muestra "Cerrar sesión".
+    //2)Sin usuario activo, muestra las opciones "Crear cuenta" e "Iniciar sesión"
     Column(
         modifier = Modifier
             .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
@@ -655,9 +730,7 @@ fun AbrirMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            // Lógica de usuarioSesion
             if (usuarioSesion != null && usuarioSesion.isActive) {
-                // Mostrar la opción de "Cerrar sesión"
                 DropdownMenuItem(onClick = {
                     onLogout()
                     expanded = false
@@ -665,7 +738,6 @@ fun AbrirMenu(
                     Text("Cerrar sesión")
                 }
             } else {
-                // Mostrar las opciones de "Crear cuenta" e "Iniciar sesión"
                 DropdownMenuItem(onClick = {
                     onRegister()
                     expanded = false
@@ -683,7 +755,7 @@ fun AbrirMenu(
     }
 }
 
-
+//----------Métodos privados----------//
 private fun cerrarSesion(context: Context) {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val editor = sharedPreferences.edit()
@@ -697,7 +769,6 @@ private fun cerrarSesion(context: Context) {
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     context.startActivity(intent)
 }
-
 
 private fun getUsuarioSesion(context: Context): UsuarioSesion? {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
