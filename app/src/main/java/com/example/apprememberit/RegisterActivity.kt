@@ -51,7 +51,7 @@ import androidx.appcompat.app.AlertDialog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-data class Usuario(val nombre: String, val correo: String, val contrasena: String)
+data class Usuario(val nombre: String, val email: String, val contrasena: String)
 
 class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -182,10 +182,15 @@ fun Register() {
             Text(text = "Crear cuenta", color = Color.White, fontSize = 28.sp)
         }
 
+        //Redirigir a Login
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp, start = 24.dp, end = 24.dp)
+                .clickable {
+                    val intent = Intent(context, LoginActivity::class.java)
+                    context.startActivity(intent)
+                }
         ) {
             Text(
                 text = "¿Ya tienes una cuenta? Inicia sesión",
@@ -198,13 +203,14 @@ fun Register() {
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
+
     }
 }
 private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, correo: String, contrasena: String) {
-    val sharedPreferences: SharedPreferences = context.getSharedPreferences("userPrefs", Context.MODE_PRIVATE)
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val gson = Gson()
 
-    //Obtener lista de usuarios
+    //Obtener lista de usuarios almacenados en memoria
     val jsonListaUsuarios = sharedPreferences.getString("listaUsuarios", null)
     val listaUsuariosTipo = object : TypeToken<MutableList<Usuario>>() {}.type
 
@@ -214,19 +220,29 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
         mutableListOf()
     }
 
-    val existeEmail = listaUsuarios.any { it.correo == correo }
+    val existeEmail = listaUsuarios.any { it.email == correo }
 
     if (existeEmail) {
         Toast.makeText(context, "Ya existe un usuario con este correo electrónico.", Toast.LENGTH_LONG).show()
     } else {
-        //Crear un nuevo usuario y añadirlo a la lista
         val nuevoUsuario = Usuario(nombre, correo, contrasena)
         listaUsuarios.add(nuevoUsuario)
-
-        //Guardar
+        //Actualiza lista de usuarios en memoria
         val editor = sharedPreferences.edit()
         val jsonActualizado = gson.toJson(listaUsuarios)
         editor.putString("listaUsuarios", jsonActualizado)
+
+        //Crea sesión
+        val usuarioSesion = UsuarioSesion(
+            nombre = nuevoUsuario.nombre,
+            email = nuevoUsuario.email,
+            contrasena = nuevoUsuario.contrasena,
+            isActive = true
+        )
+        //Guardar
+        val usuarioSesionJson = gson.toJson(usuarioSesion)
+        editor.putString("usuarioSesion", usuarioSesionJson)
+
         editor.apply()
 
         val builder = AlertDialog.Builder(context)
@@ -242,4 +258,5 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
         builder.show()
     }
 }
+
 

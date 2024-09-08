@@ -1,6 +1,11 @@
 package com.example.apprememberit
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
@@ -51,8 +56,12 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.ExtendedFloatingActionButton
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -60,11 +69,15 @@ import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +88,8 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.unit.dp
 import com.example.apprememberit.ViewModel.RecordatorioViewModel
+import com.google.gson.Gson
+import java.util.Calendar
 
 
 class MainActivity : AppCompatActivity() {
@@ -92,6 +107,11 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var mostrarNuevoRecordatorio by rememberSaveable { mutableStateOf(false) }
+    var mensajeBienvenida by remember { mutableStateOf("Bienvenido") }
+
+    val context = LocalContext.current
+    val usuarioSesion = getUsuarioSesion(context)
+
 
     Box(
         modifier = Modifier
@@ -138,12 +158,9 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(
-                            text = "Bienvenido", color = Color.White, fontSize = 18.sp
-                        )
-                        Text(
-                            text = "{Nombre de usuario}",
+                            text = mensajeBienvenida,
                             color = Color.White,
-                            fontSize = 22.sp,
+                            fontSize = 35.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(top = 14.dp)
                         )
@@ -164,30 +181,22 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
                             end.linkTo(parent.end)
                         }
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
-                            .height(90.dp)
-                            .width(90.dp)
-                            .background(
-                                color = Color(android.graphics.Color.parseColor("#ffe0c8")),
-                                shape = RoundedCornerShape(20.dp)
-                            ),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_7),
-                            contentDescription = null,
-                            Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
-                        Text(
-                            text = "Ajustes",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic,
-                            color = Color(android.graphics.Color.parseColor("#c77710"))
-                        )
-                    }
+                    AbrirMenu(
+                        context = context,
+                        onLogout = {
+                            cerrarSesion(context)
+                            val intent = Intent(context, LoginActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        onLogin = {
+                            val intent = Intent(context, LoginActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        onRegister = {
+                            val intent = Intent(context, RegisterActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                    )
                 }
             }
 
@@ -249,7 +258,6 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
             NuevoRecordatorioDialog(
                 onDismiss = { mostrarNuevoRecordatorio = false },
                 onSave = { nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora ->
-                    // Lógica para agregar el nuevo recordatorio al ViewModel
                     viewModel.agregarRecordatorio(
                         Recordatorio(nuevoTitulo, nuevaDescripcion, nuevaFecha, nuevaHora, "usuario@example.com")
                     )
@@ -258,7 +266,7 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
             )
         }
 
-        FloatingActionButton(
+        ExtendedFloatingActionButton(
             onClick = {
                 mostrarNuevoRecordatorio = true // Muestra el formulario al hacer clic
             },
@@ -266,13 +274,28 @@ fun Dashboard(viewModel: RecordatorioViewModel = viewModel()) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
-        ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar")
-        }
-
-
+                .height(56.dp)
+                .width(160.dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Agregar",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
+                )
+            },
+            text = {
+                Text(
+                    text = "Nuevo",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    modifier = Modifier.padding(start = 0.dp)
+                )
+            }
+        )
     }
 }
+
 
 data class Recordatorio(val titulo: String, val descripcion: String, val fecha: String, val hora: String, val emailUsuario: String)
 
@@ -281,56 +304,71 @@ fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: (
     Card(
         shape = RoundedCornerShape(10.dp),
         elevation = 4.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
     ) {
         Column(
             modifier = Modifier
                 .background(Color.White)
                 .padding(16.dp)
         ) {
-            Text(text = recordatorio.titulo, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(text = recordatorio.descripcion, fontSize = 16.sp, color = Color.Gray)
-            Text(text = "Fecha: ${recordatorio.fecha} - Hora: ${recordatorio.hora}", fontSize = 14.sp, color = Color.Gray)
+            Text(text = recordatorio.titulo, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text(text = recordatorio.descripcion, fontSize = 23.sp, color = Color.Gray)
+            Text(text = "Fecha: ${recordatorio.fecha} - Hora: ${recordatorio.hora}", fontSize = 22.sp, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onDelete) {
-                    Text(text = "Eliminar", color = Color.Red)
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = Color.Red,
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                TextButton(onClick = onEdit) {
-                    Text(text = "Editar", color = Color(android.graphics.Color.parseColor("#3b608c")))
+                Spacer(modifier = Modifier.width(16.dp))
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = Color(android.graphics.Color.parseColor("#3b608c")),
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
             }
         }
     }
 }
 
+
 @Composable
 fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "Confirmar Eliminación", fontSize = 20.sp, color = Color.Red)
+            Text(text = "Confirmar Eliminación", fontSize = 27.sp, color = Color.Red)
         },
         text = {
-            Text(text = "¿Estás seguro de que deseas eliminar este recordatorio?")
+            Text(text = "¿Está seguro de que desea eliminar este recordatorio?",fontSize = 20.sp)
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
             ) {
-                Text(text = "Eliminar", color = Color.White)
+                Text(text = "Eliminar", color = Color.White, fontSize = 18.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Cancelar", color = Color.Gray)
+                Text(text = "Cancelar", color = Color.Gray, fontSize = 18.sp)
             }
         }
     )
@@ -348,13 +386,36 @@ fun EditRecordatorioDialog(
     var fecha by rememberSaveable { mutableStateOf(recordatorio.fecha) }
     var hora by rememberSaveable { mutableStateOf(recordatorio.hora) }
 
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            fecha = "$dayOfMonth/${month + 1}/$year"
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            hora = String.format("%02d:%02d", hourOfDay, minute)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = "Editar Recordatorio",
-                fontSize = 20.sp,
-                color = Color(android.graphics.Color.parseColor("#Ea6d35"))
+                fontSize = 27.sp,
+                color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         },
         text = {
@@ -378,19 +439,27 @@ fun EditRecordatorioDialog(
 
                 OutlinedTextField(
                     value = fecha,
-                    onValueChange = { fecha = it },
+                    onValueChange = { },
                     label = { Text(text = "Fecha") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            datePickerDialog.show()
+                        }
                 )
 
-                // Campo de Hora
+                // Campo de selección de hora
                 OutlinedTextField(
                     value = hora,
-                    onValueChange = { hora = it },
+                    onValueChange = { },
                     label = { Text(text = "Hora") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            timePickerDialog.show()
+                        }
                 )
             }
         },
@@ -422,6 +491,7 @@ fun EditRecordatorioDialog(
     )
 }
 
+
 @Composable
 fun NuevoRecordatorioDialog(
     onDismiss: () -> Unit,
@@ -431,6 +501,30 @@ fun NuevoRecordatorioDialog(
     var descripcion by rememberSaveable { mutableStateOf("") }
     var fecha by rememberSaveable { mutableStateOf("") }
     var hora by rememberSaveable { mutableStateOf("") }
+
+    val context = LocalContext.current
+
+    val calendar = Calendar.getInstance()
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            fecha = "$dayOfMonth/${month + 1}/$year"
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            hora = String.format("%02d:%02d", hourOfDay, minute)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -452,7 +546,7 @@ fun NuevoRecordatorioDialog(
                     label = { Text(text = "Título") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -462,18 +556,26 @@ fun NuevoRecordatorioDialog(
 
                 OutlinedTextField(
                     value = fecha,
-                    onValueChange = { fecha = it },
+                    onValueChange = { },
                     label = { Text(text = "Fecha") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            datePickerDialog.show()
+                        }
                 )
 
                 OutlinedTextField(
                     value = hora,
-                    onValueChange = { hora = it },
+                    onValueChange = { },
                     label = { Text(text = "Hora") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            timePickerDialog.show()
+                        }
                 )
             }
         },
@@ -504,3 +606,110 @@ fun NuevoRecordatorioDialog(
         }
     )
 }
+
+
+
+@Composable
+fun AbrirMenu(
+    context: Context, // Agregamos el contexto para acceder a SharedPreferences
+    onLogout: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Obtener la información de usuarioSesion de SharedPreferences
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val gson = Gson()
+    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)
+    val usuarioSesion = usuarioSesionJson?.let {
+        gson.fromJson(it, UsuarioSesion::class.java)
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
+            .height(80.dp)
+            .width(80.dp)
+            .background(
+                color = Color(android.graphics.Color.parseColor("#ffe0c8")),
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable { expanded = true },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_7),
+            contentDescription = null,
+            Modifier.padding(top = 8.dp, bottom = 4.dp)
+        )
+        Text(
+            text = "Ajustes",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            fontStyle = FontStyle.Italic,
+            color = Color(android.graphics.Color.parseColor("#c77710"))
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            // Lógica de usuarioSesion
+            if (usuarioSesion != null && usuarioSesion.isActive) {
+                // Mostrar la opción de "Cerrar sesión"
+                DropdownMenuItem(onClick = {
+                    onLogout()
+                    expanded = false
+                }) {
+                    Text("Cerrar sesión")
+                }
+            } else {
+                // Mostrar las opciones de "Crear cuenta" e "Iniciar sesión"
+                DropdownMenuItem(onClick = {
+                    onRegister()
+                    expanded = false
+                }) {
+                    Text("Crear cuenta")
+                }
+                DropdownMenuItem(onClick = {
+                    onLogin()
+                    expanded = false
+                }) {
+                    Text("Iniciar sesión")
+                }
+            }
+        }
+    }
+}
+
+
+private fun cerrarSesion(context: Context) {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+
+    editor.remove("usuarioSesion")
+    editor.apply()
+
+    Toast.makeText(context, "Sesión cerrada correctamente.", Toast.LENGTH_LONG).show()
+
+    val intent = Intent(context, LoginActivity::class.java)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    context.startActivity(intent)
+}
+
+
+private fun getUsuarioSesion(context: Context): UsuarioSesion? {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val gson = Gson()
+
+    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)
+
+    return if (usuarioSesionJson == null) {
+        null
+    } else {
+        gson.fromJson(usuarioSesionJson, UsuarioSesion::class.java)
+    }
+}
+
+

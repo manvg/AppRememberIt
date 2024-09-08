@@ -1,6 +1,9 @@
 package com.example.apprememberit
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
@@ -38,10 +41,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +61,10 @@ class LoginActivity : AppCompatActivity() {
 @Preview
 @Composable
 fun Login() {
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -74,10 +84,9 @@ fun Login() {
             fontWeight = FontWeight.SemiBold
         )
 
-        var text by rememberSaveable { mutableStateOf(value = "") }
-
         TextField(
-            value = text, onValueChange = { text = it },
+            value = email,
+            onValueChange = { email = it },
             leadingIcon = {
                 Image(
                     painter = painterResource(id = R.drawable.email), contentDescription = null,
@@ -102,9 +111,9 @@ fun Login() {
                 .background(Color.White, CircleShape)
         )
 
-        var text2 by rememberSaveable { mutableStateOf(value = "") }
         TextField(
-            value = text2, onValueChange = { text2 = it },
+            value = password,
+            onValueChange = { password = it },
             leadingIcon = {
                 Image(
                     painter = painterResource(id = R.drawable.password), contentDescription = null,
@@ -129,8 +138,10 @@ fun Login() {
                 .padding(top = 16.dp, start = 24.dp, end = 24.dp)
                 .background(Color.White, CircleShape)
         )
+
+        //Botón de inicio de sesión
         Button(
-            onClick = { /* Acción al hacer clic en el botón */ },
+            onClick = { iniciarSesion(context, email, password) },
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
             modifier = Modifier
                 .fillMaxWidth()
@@ -140,38 +151,110 @@ fun Login() {
             Text(text = "Iniciar sesión", color = Color.White, fontSize = 22.sp)
         }
 
+        //Continuar sin cuenta
+        Button(
+            onClick = {
+                val intent = Intent(context, MainActivity::class.java)
+                context.startActivity(intent)
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
+                .height(56.dp)
+        ) {
+            Text(text = "Continuar sin cuenta...", color = Color.White, fontSize = 22.sp)
+        }
+
+        //Registro
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp, start = 24.dp, end = 24.dp)
+                .clickable {
+                    val intent = Intent(context, RegisterActivity::class.java)
+                    context.startActivity(intent)
+                }
         ) {
             Text(
                 text = "¿No tienes una cuenta? Regístrate",
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 18.dp)
+                    .padding(top = 32.dp)
                     .fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
 
+        //Recuperar contraseña
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp, start = 24.dp, end = 24.dp)
+                .clickable {
+                    val intent = Intent(context, RecuperarActivity::class.java)
+                    context.startActivity(intent)
+                }
         ) {
             Text(
                 text = "¿Olvidaste tu contraseña?",
-                fontSize = 16.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 18.dp)
+                    .padding(top = 2.dp)
                     .fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
+
     }
 }
+private fun iniciarSesion(context: Context, email: String, contrasena: String) {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val gson = Gson()
+
+    val jsonListaUsuarios = sharedPreferences.getString("listaUsuarios", null)
+    val listaUsuariosTipo = object : TypeToken<MutableList<Usuario>>() {}.type
+    val listaUsuarios: MutableList<Usuario> = if (jsonListaUsuarios != null) {
+        gson.fromJson(jsonListaUsuarios, listaUsuariosTipo)
+    } else {
+        mutableListOf()
+    }
+
+    val usuario = listaUsuarios.find { it.email == email && it.contrasena == contrasena }
+
+    if (usuario != null) {
+        val usuarioSesion = UsuarioSesion(
+            nombre = usuario.nombre,
+            email = usuario.email,
+            contrasena = usuario.contrasena,
+            isActive = true
+        )
+
+        val editor = sharedPreferences.edit()
+        val usuarioSesionJson = gson.toJson(usuarioSesion)
+        editor.putString("usuarioSesion", usuarioSesionJson)
+        editor.apply()
+
+        Toast.makeText(context, "Bienvenido, ${usuario.nombre}", Toast.LENGTH_LONG).show()
+
+        val intent = Intent(context, MainActivity::class.java)
+        context.startActivity(intent)
+    } else {
+        Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
+
+        val editor = sharedPreferences.edit()
+        editor.remove("usuarioSesion")
+        editor.apply()
+    }
+}
+
+data class UsuarioSesion(
+    val nombre: String,
+    val email: String,
+    val contrasena: String,
+    val isActive: Boolean
+)
