@@ -61,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.example.apprememberit.ViewModel.RecordatorioViewModel
@@ -74,13 +75,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent{
-            Dashboard(context = this)
+            Dashboard()
         }
     }
 }
 
+@Preview
 @Composable
-fun Dashboard(context: Context) {
+fun Dashboard() {
+    val context = LocalContext.current
     val viewModel: RecordatorioViewModel = remember {
         RecordatorioViewModel(context)
     }

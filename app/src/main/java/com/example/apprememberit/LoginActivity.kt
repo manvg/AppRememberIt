@@ -57,7 +57,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 }
-
+@Preview
 @Composable
 fun Login() {
     val context = LocalContext.current
