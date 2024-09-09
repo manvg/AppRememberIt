@@ -48,6 +48,15 @@ import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -65,148 +74,171 @@ class RegisterActivity : AppCompatActivity() {
 @Preview
 @Composable
 fun Register() {
-    // Obtenemos el contexto dentro de una función composable
     val context = LocalContext.current
 
-    // Variables para almacenar los valores del formulario
     var text_nombre by rememberSaveable { mutableStateOf("") }
     var text_correo by rememberSaveable { mutableStateOf("") }
     var text_contrasena by rememberSaveable { mutableStateOf("") }
-
-    Column(
+    // FocusRequester para controlar el foco entre campos
+    val correoFocusRequester = remember { FocusRequester() }
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
+            .fillMaxSize()
             .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
     ) {
         Image(
             painter = painterResource(id = R.drawable.top_background1),
-            contentDescription = null
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Text(
-            text = "Registrarte",
-            color = Color(android.graphics.Color.parseColor("#3b608c")),
-            modifier = Modifier.padding(top = 16.dp, start = 24.dp),
-            fontSize = 48.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        TextField(
-            value = text_nombre, onValueChange = { text_nombre = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.name), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(3.dp)
-                )
-            },
-            label = { Text(text = "Nombre", fontSize = 20.sp) },
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        TextField(
-            value = text_correo, onValueChange = { text_correo = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.email), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(3.dp)
-                )
-            },
-            label = { Text(text = "Correo electrónico", fontSize = 20.sp) },
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        TextField(
-            value = text_contrasena, onValueChange = { text_contrasena = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.password), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(6.dp)
-                )
-            },
-            label = { Text(text = "Contraseña", fontSize = 20.sp) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        Button(
-            onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .height(56.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 300.dp)
+                .padding(horizontal = 24.dp)
         ) {
-            Text(text = "Crear cuenta", color = Color.White, fontSize = 28.sp)
-        }
+            Text(
+                text = "Registrarte",
+                color = Color(android.graphics.Color.parseColor("#3b608c")),
+                modifier = Modifier.align(Alignment.Start),
+                fontSize = 48.sp,
+                fontWeight = FontWeight.SemiBold
+            )
 
-        //Redirigir a Login
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, start = 24.dp, end = 24.dp)
-                .clickable {
-                    val intent = Intent(context, LoginActivity::class.java)
-                    context.startActivity(intent)
-                }
-        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            // Campo de nombre
+            TextField(
+                value = text_nombre,
+                onValueChange = { text_nombre = it },
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.name),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                label = { Text(text = "Nombre", fontSize = 20.sp) },
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+                ),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next // Define la acción de siguiente
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = {
+                        correoFocusRequester.requestFocus()
+                    }
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            //Campo correo electrónico
+            TextField(
+                value = text_correo,
+                onValueChange = { text_correo = it },
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.email),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                label = { Text(text = "Correo electrónico", fontSize = 20.sp) },
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+                ),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done // Define la acción "Done" para el último campo
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(correoFocusRequester) // Asignamos el FocusRequester
+                    .background(Color.White, CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            //Campo contraseña
+            TextField(
+                value = text_contrasena,
+                onValueChange = { text_contrasena = it },
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.password),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                label = { Text(text = "Contraseña", fontSize = 20.sp) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            //Botón Crear cuenta
+            Button(
+                onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text(text = "Crear cuenta", color = Color.White, fontSize = 28.sp)
+            }
+
+            Spacer(modifier = Modifier.height(50.dp))
+
+            //Redirigir a Login
             Text(
                 text = "¿Ya tienes una cuenta? Inicia sesión",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 40.dp)
-                    .fillMaxWidth(),
+                    .align(Alignment.CenterHorizontally)
+                    .clickable {
+                        val intent = Intent(context, LoginActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
-
     }
 }
+
 private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, correo: String, contrasena: String) {
+    //Validar que los campos no estén vacíos
+    if (nombre.isBlank() || correo.isBlank() || contrasena.isBlank()) {
+        Toast.makeText(context, "Todos los campos son obligatorios.", Toast.LENGTH_LONG).show()
+        return
+    }
+
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val gson = Gson()
 
@@ -220,6 +252,7 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
         mutableListOf()
     }
 
+    //Comprobar si ya existe un usuario con el mismo correo
     val existeEmail = listaUsuarios.any { it.email == correo }
 
     if (existeEmail) {
@@ -227,24 +260,25 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
     } else {
         val nuevoUsuario = Usuario(nombre, correo, contrasena)
         listaUsuarios.add(nuevoUsuario)
-        //Actualiza lista de usuarios en memoria
+
+        //Actualizar lista de usuarios en memoria
         val editor = sharedPreferences.edit()
         val jsonActualizado = gson.toJson(listaUsuarios)
         editor.putString("listaUsuarios", jsonActualizado)
 
-        //Crea sesión
+        //Crear sesión
         val usuarioSesion = UsuarioSesion(
             nombre = nuevoUsuario.nombre,
             email = nuevoUsuario.email,
             contrasena = nuevoUsuario.contrasena,
             isActive = true
         )
-        //Guardar
         val usuarioSesionJson = gson.toJson(usuarioSesion)
         editor.putString("usuarioSesion", usuarioSesionJson)
 
         editor.apply()
 
+        // Mostrar diálogo de éxito
         val builder = AlertDialog.Builder(context)
         builder.setTitle("Éxito")
         builder.setMessage("Cuenta creada correctamente.")
@@ -258,5 +292,6 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
         builder.show()
     }
 }
+
 
 

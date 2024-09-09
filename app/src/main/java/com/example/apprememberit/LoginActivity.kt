@@ -33,8 +33,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,6 +61,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 }
+
 @Preview
 @Composable
 fun Login() {
@@ -75,152 +80,147 @@ fun Login() {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
+            .fillMaxSize()
             .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
     ) {
         Image(
             painter = painterResource(id = R.drawable.top_background1),
-            contentDescription = null
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Text(
-            text = "Mi Cuenta",
-            color = Color(android.graphics.Color.parseColor("#Ea6d35")),
-            modifier = Modifier.padding(top = 16.dp, start = 24.dp),
-            fontSize = 40.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.email), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(3.dp)
-                )
-            },
-            label = { Text(text = "Correo electrónico", fontSize = 18.sp) },
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            leadingIcon = {
-                Image(
-                    painter = painterResource(id = R.drawable.password), contentDescription = null,
-                    modifier = Modifier
-                        .size(63.dp)
-                        .padding(start = 6.dp)
-                        .padding(6.dp)
-                )
-            },
-            label = { Text(text = "Contraseña", fontSize = 18.sp) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(10.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
-                unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .background(Color.White, CircleShape)
-        )
-
-        //Botón de inicio de sesión
-        Button(
-            onClick = { iniciarSesion(context, email, password) },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .height(56.dp)
-        ) {
-            Text(text = "Iniciar sesión", color = Color.White, fontSize = 22.sp)
-        }
-
-        //Continuar sin cuenta
-        Button(
-            onClick = {
-                val intent = Intent(context, MainActivity::class.java)
-                context.startActivity(intent)
-            },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, start = 24.dp, end = 24.dp)
-                .height(56.dp)
-        ) {
-            Text(text = "Continuar sin cuenta...", color = Color.White, fontSize = 22.sp)
-        }
-
-        //Registro
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, start = 24.dp, end = 24.dp)
-                .clickable {
-                    val intent = Intent(context, RegisterActivity::class.java)
-                    context.startActivity(intent)
-                }
+                .align(Alignment.TopCenter)
+                .offset(y = 300.dp)
+                .padding(horizontal = 24.dp)
         ) {
             Text(
+                text = "Mi Cuenta",
+                color = Color(android.graphics.Color.parseColor("#Ea6d35")),
+                modifier = Modifier
+                    .align(Alignment.Start),
+                fontSize = 40.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.email),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                label = { Text(text = "Correo electrónico", fontSize = 18.sp) },
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.password),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                label = { Text(text = "Contraseña", fontSize = 18.sp) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    textColor = Color(android.graphics.Color.parseColor("#5e5e5e")),
+                    unfocusedLabelColor = Color(android.graphics.Color.parseColor("#5e5e5e"))
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { iniciarSesion(context, email, password) },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(text = "Iniciar sesión", color = Color.White, fontSize = 18.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    val intent = Intent(context, MainActivity::class.java)
+                    context.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(text = "Continuar sin cuenta...", color = Color.White, fontSize = 18.sp)
+            }
+
+            Spacer(modifier = Modifier.height(50.dp))
+
+            Text(
                 text = "¿No tienes una cuenta? Regístrate",
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 32.dp)
-                    .fillMaxWidth(),
+                    .align(Alignment.CenterHorizontally)
+                    .clickable {
+                        val intent = Intent(context, RegisterActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
-        }
 
-        //Recuperar contraseña
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, start = 24.dp, end = 24.dp)
-                .clickable {
-                    val intent = Intent(context, RecuperarActivity::class.java)
-                    context.startActivity(intent)
-                }
-        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = "¿Olvidaste tu contraseña?",
-                fontSize = 20.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .padding(top = 2.dp)
-                    .fillMaxWidth(),
+                    .align(Alignment.CenterHorizontally)
+                    .clickable {
+                        val intent = Intent(context, RecuperarActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor("#3b608c"))
             )
         }
     }
 }
+
 
 private fun iniciarSesion(context: Context, email: String, contrasena: String) {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
