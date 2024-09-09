@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -186,6 +187,7 @@ fun Register() {
                 },
                 label = { Text(text = "Contraseña", fontSize = 20.sp) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
                 shape = RoundedCornerShape(10.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
                     backgroundColor = Color.White,
@@ -203,7 +205,7 @@ fun Register() {
 
             //Botón Crear cuenta
             Button(
-                onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre, text_correo, text_contrasena) },
+                onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre.trim(), text_correo.trim(), text_contrasena) },
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
                 modifier = Modifier
                     .fillMaxWidth()

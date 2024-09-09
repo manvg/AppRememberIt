@@ -439,12 +439,16 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 //Selector de categorías de recordatorios
-                Box(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                ) {
                     TextField(
                         value = categoriaSeleccionada,
                         onValueChange = {},
                         label = { Text("Categoría") },
                         readOnly = true,
+                        enabled = false,
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
@@ -452,13 +456,13 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                                 modifier = Modifier.clickable { expanded = !expanded }
                             )
                         },
-                        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                        modifier = Modifier.fillMaxWidth()
                     )
                     DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        viewModel.categorias.forEach { categoria ->//Obtener categorías desde ViewModel
+                        viewModel.categorias.forEach { categoria -> //Obtener categorías desde ViewModel
                             DropdownMenuItem(onClick = {
                                 categoriaSeleccionada = categoria
                                 expanded = false
@@ -477,17 +481,19 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                //Campo "Fecha"
+                // Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { },
                     label = { Text(text = "Fecha") },
                     readOnly = true,
+                    enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            datePickerDialog.show()
-                        }
+                            datePickerDialog.show()//Mostrar el selector de fecha
+                        },
+                    isError = fecha.isBlank()//Mostrar error si no se ha seleccionado fecha
                 )
 
                 //Campo "Hora"
@@ -496,11 +502,13 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     onValueChange = { },
                     label = { Text(text = "Hora") },
                     readOnly = true,
+                    enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            timePickerDialog.show()
-                        }
+                            timePickerDialog.show()// Mostrar el selector de hora
+                        },
+                    isError = hora.isBlank() //Mostrar error si no se ha seleccionado hora
                 )
             }
         },
@@ -541,16 +549,20 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
 
 //----------Dialog "Nuevo Recordatorio"----------//
 @Composable
-fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: RecordatorioViewModel, emailUsuario: String?, onSave: () -> Unit)
-{
+fun NuevoRecordatorioDialog(
+    onDismiss: () -> Unit,
+    viewModel: RecordatorioViewModel,
+    emailUsuario: String?,
+    onSave: () -> Unit
+) {
     var categoriaSeleccionada by rememberSaveable { mutableStateOf("Seleccione") }
     var descripcion by rememberSaveable { mutableStateOf("") }
     var fecha by rememberSaveable { mutableStateOf("") }
     var hora by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+    var errorMessage by rememberSaveable { mutableStateOf("") }
 
     val context = LocalContext.current
-
     val calendar = Calendar.getInstance()
 
     val datePickerDialog = DatePickerDialog(
@@ -587,13 +599,17 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: RecordatorioViewMo
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                //Selector categorías de recordatorios
-                Box(modifier = Modifier.fillMaxWidth()) {
+                //Selector de categorías de recordatorios
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                ) {
                     TextField(
                         value = categoriaSeleccionada,
                         onValueChange = {},
                         label = { Text("Categoría") },
                         readOnly = true,
+                        enabled = false,
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
@@ -601,7 +617,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: RecordatorioViewMo
                                 modifier = Modifier.clickable { expanded = !expanded }
                             )
                         },
-                        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                        modifier = Modifier.fillMaxWidth()
                     )
                     DropdownMenu(
                         expanded = expanded,
@@ -623,49 +639,76 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: RecordatorioViewMo
                     value = descripcion,
                     onValueChange = { descripcion = it },
                     label = { Text(text = "Descripción") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = descripcion.isBlank() // Mostrar error si está vacío
                 )
-                //Campo "Fecha"
+
+                // Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { },
                     label = { Text(text = "Fecha") },
                     readOnly = true,
+                    enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            datePickerDialog.show()
-                        }
+                            datePickerDialog.show()//Mostrar el selector de fecha
+                        },
+                    isError = fecha.isBlank()//Mostrar error si no se ha seleccionado fecha
                 )
+
                 //Campo "Hora"
                 OutlinedTextField(
                     value = hora,
                     onValueChange = { },
                     label = { Text(text = "Hora") },
                     readOnly = true,
+                    enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            timePickerDialog.show()
-                        }
+                            timePickerDialog.show()// Mostrar el selector de hora
+                        },
+                    isError = hora.isBlank() //Mostrar error si no se ha seleccionado hora
                 )
+
+                //Mostrar mensaje de error si hay algún campo inválido
+                if (errorMessage.isNotBlank()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    //Guardar el nuevo recordatorio en el ViewModel
-                    val nuevoRecordatorio = Recordatorio(
-                        titulo = categoriaSeleccionada,
-                        descripcion = descripcion,
-                        fecha = fecha,
-                        hora = hora,
-                        emailUsuario = emailUsuario ?: ""
-                    )
-                    viewModel.agregarRecordatorio(nuevoRecordatorio)
-                    onSave()//Guardar
+                    // Validar que todos los campos sean válidos
+                    if (categoriaSeleccionada == "Seleccione") {
+                        errorMessage = "Debe seleccionar una categoría."
+                    } else if (descripcion.isBlank()) {
+                        errorMessage = "La descripción es obligatoria."
+                    } else if (fecha.isBlank()) {
+                        errorMessage = "Debe seleccionar una fecha."
+                    } else if (hora.isBlank()) {
+                        errorMessage = "Debe seleccionar una hora."
+                    } else {
+                        // Todos los campos son válidos, guardar el recordatorio
+                        errorMessage = ""
+                        val nuevoRecordatorio = Recordatorio(
+                            titulo = categoriaSeleccionada,
+                            descripcion = descripcion,
+                            fecha = fecha,
+                            hora = hora,
+                            emailUsuario = emailUsuario ?: ""
+                        )
+                        viewModel.agregarRecordatorio(nuevoRecordatorio)
+                        onSave() // Guardar
+                    }
                 },
-                enabled = categoriaSeleccionada != "Seleccione",
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
                 )

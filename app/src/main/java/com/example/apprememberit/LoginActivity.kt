@@ -47,6 +47,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -146,6 +147,7 @@ fun Login() {
                 },
                 label = { Text(text = "Contraseña", fontSize = 18.sp) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
                 shape = RoundedCornerShape(10.dp),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
                     backgroundColor = Color.White,
@@ -162,7 +164,7 @@ fun Login() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { iniciarSesion(context, email, password) },
+                onClick = { iniciarSesion(context, email.trim(), password.trim()) },
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -223,6 +225,12 @@ fun Login() {
 
 
 private fun iniciarSesion(context: Context, email: String, contrasena: String) {
+    //Validar que los campos de correo y contraseña no estén vacíos
+    if (email.isBlank() || contrasena.isBlank()) {
+        Toast.makeText(context, "El correo y la contraseña son obligatorios.", Toast.LENGTH_LONG).show()
+        return
+    }
+
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val gson = Gson()
 
@@ -234,9 +242,11 @@ private fun iniciarSesion(context: Context, email: String, contrasena: String) {
         mutableListOf()
     }
 
+    //Buscar usuario con el correo y la contraseña en lista de usuarios
     val usuario = listaUsuarios.find { it.email == email && it.contrasena == contrasena }
 
     if (usuario != null) {
+        //Crear sesión de usuario
         val usuarioSesion = UsuarioSesion(
             nombre = usuario.nombre,
             email = usuario.email,
@@ -256,11 +266,13 @@ private fun iniciarSesion(context: Context, email: String, contrasena: String) {
     } else {
         Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_LONG).show()
 
+        // Eliminar cualquier sesión activa anterior
         val editor = sharedPreferences.edit()
         editor.remove("usuarioSesion")
         editor.apply()
     }
 }
+
 
 data class UsuarioSesion(
     val nombre: String,
