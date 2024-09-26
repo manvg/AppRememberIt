@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -56,6 +57,7 @@ dependencies {
     implementation(libs.androidx.activity)
     //implementation(libs.androidx.security.crypto.ktx)
     implementation("androidx.security:security-crypto:1.1.0-alpha03")
+    implementation(libs.firebase.database)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     //implementation(libs.androidx.appcompat)
