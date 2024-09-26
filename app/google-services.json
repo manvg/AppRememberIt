@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "449490333867",
+    "firebase_url": "https://app-remember-it-default-rtdb.firebaseio.com",
+    "project_id": "app-remember-it",
+    "storage_bucket": "app-remember-it.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:449490333867:android:5175cbb96556f1778e07ee",
+        "android_client_info": {
+          "package_name": "com.example.apprememberit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1T5XJ653kNXAEMjqiu82V_gjx03GkMPU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
