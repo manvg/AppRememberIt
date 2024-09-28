@@ -1,21 +1,24 @@
 [versions]
-agp = "8.5.2"
-kotlin = "1.7.20"
+agp = "8.5.2"  # Android Gradle Plugin
+kotlin = "1.9.0"  # Mantienes la versión de Kotlin actualizada
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.1"
 activityCompose = "1.9.0"
-composeBom = "2024.06.00"
+composeBom = "2024.06.00"  # Última versión del BOM de Compose
 constraintlayout = "2.1.4"
 appcompat = "1.7.0"
 material = "1.12.0"
 activity = "1.9.1"
-securityCrypto = "1.1.0-alpha03"  # Corregido a la versión existente
+securityCrypto = "1.1.0-alpha03"
 gson = "2.8.9"
 googleGmsGoogleServices = "4.4.2"
-firebaseDatabase = "21.0.0"
+firebaseDatabase = "20.3.0"
+firebaseAuthKtx = "23.0.0"
+composeCompiler = "1.5.0"  # Versión compatible con Kotlin 1.9.0
+constraintlayoutCompose = "1.0.1"  # Última versión compatible con Compose
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,8 +39,9 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }  # Corregido a la versión correcta
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
 
 [plugins]

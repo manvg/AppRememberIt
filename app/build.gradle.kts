@@ -27,61 +27,84 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    buildFeatures{
+
+    // Asegurarse de usar la versión correcta del compilador de Compose
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()  // Versión del compilador de Compose definida en `libs.versions.toml`
+    }
+
+    buildFeatures {
         compose = true
     }
-    packaging{
-        resources{
+
+    packaging {
+        resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
 }
 
 dependencies {
+    // Core AndroidX y Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Jetpack Compose (usando BOM para gestionar versiones de Compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
+    // AppCompat y Material
     implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+
+    // Activity y ConstraintLayout para Compose
     implementation(libs.androidx.activity)
-    //implementation(libs.androidx.security.crypto.ktx)
-    implementation("androidx.security:security-crypto:1.1.0-alpha03")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")  // Asegura la versión de ConstraintLayout para Compose
+
+    // Firebase (Authentication y Database)
     implementation(libs.firebase.database)
+    implementation(libs.firebase.auth.ktx)
+
+    // Security
+    implementation("androidx.security:security-crypto:1.1.0-alpha03")
+
+    // Debug tools para Jetpack Compose
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    //implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    //implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
+
+    // Testing (JUnit y Espresso)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation("androidx.compose.ui:ui:1.4.3")
-    implementation("androidx.compose.ui:ui-tooling:1.4.3")
-    implementation("androidx.compose.foundation:foundation:1.4.3")
-    implementation("androidx.compose.material:material:1.4.3")
-    implementation("androidx.compose.material:material-icons-core:1.4.3")
-    implementation("androidx.compose.material:material-icons-extended:1.4.3")
-    implementation("androidx.activity:activity-compose:1.7.2")
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+
+    // Jetpack Compose específico (consolidado con BOM)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.runtime:runtime-saveable")
+
+    // Navigation y ViewModel en Compose
     implementation("androidx.navigation:navigation-compose:2.4.0")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.4.2")
-    implementation("androidx.compose.runtime:runtime-saveable:1.6.8")
-    implementation(libs.gson)
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation("androidx.security:security-crypto:1.1.0-alpha03")
-    implementation(libs.gson)
-    implementation("androidx.compose.runtime:runtime-livedata:1.4.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.5.1")
+
+    // Gson para manejo de JSON
+    implementation(libs.gson)
 }
+

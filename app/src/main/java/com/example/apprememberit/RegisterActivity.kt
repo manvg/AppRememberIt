@@ -58,14 +58,21 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.example.apprememberit.ViewModel.Usuario
+import com.example.apprememberit.ViewModel.UsuarioSesion
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 
-data class Usuario(val nombre: String, val email: String, val contrasena: String)
+private lateinit var auth: FirebaseAuth
 
 class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        //Firebase Authentication
+        auth = FirebaseAuth.getInstance()
+
         setContent{
             Register()
         }
@@ -80,7 +87,7 @@ fun Register() {
     var text_nombre by rememberSaveable { mutableStateOf("") }
     var text_correo by rememberSaveable { mutableStateOf("") }
     var text_contrasena by rememberSaveable { mutableStateOf("") }
-    // FocusRequester para controlar el foco entre campos
+
     val correoFocusRequester = remember { FocusRequester() }
     Box(
         modifier = Modifier
@@ -108,7 +115,7 @@ fun Register() {
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            // Campo de nombre
+            //Campo de nombre
             TextField(
                 value = text_nombre,
                 onValueChange = { text_nombre = it },
@@ -205,7 +212,7 @@ fun Register() {
 
             //Botón Crear cuenta
             Button(
-                onClick = { guardarUsuarioEnSharedPreferences(context, text_nombre.trim(), text_correo.trim(), text_contrasena) },
+                onClick = { guardarUsuario(context, text_nombre.trim(), text_correo.trim(), text_contrasena) },
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(android.graphics.Color.parseColor("#3b608c"))),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -234,6 +241,63 @@ fun Register() {
     }
 }
 
+private fun guardarUsuario(context: Context, nombre: String, correo: String, contrasena: String) {
+    if (nombre.isBlank() || correo.isBlank() || contrasena.isBlank()) {
+        Toast.makeText(context, "Todos los campos son obligatorios.", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    //Usar Firebase Authentication para registrar un nuevo usuario
+    auth.createUserWithEmailAndPassword(correo, contrasena)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val user = auth.currentUser
+
+                //Guardar datos usuario en Firebase Realtime Database
+                val database = FirebaseDatabase.getInstance()
+                val ref = database.getReference("usuarios").child(user?.uid ?: "")
+
+                val nuevoUsuario = Usuario(nombre, correo) // Sin el campo contraseña
+
+                ref.setValue(nuevoUsuario).addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        //Guardar el email en SharedPreferences
+                        guardarEmailEnSharedPreferences(context, correo)
+
+                        //Mostrar mensaje de éxito y redirigir a MainActivity
+                        val builder = AlertDialog.Builder(context)
+                        builder.setTitle("Éxito")
+                        builder.setMessage("Cuenta creada correctamente.")
+                        builder.setPositiveButton("Aceptar") { dialog, _ ->
+                            dialog.dismiss()
+                            //Redirigir a MainActivity
+                            val intent = Intent(context, MainActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                        builder.setCancelable(false)
+                        builder.show()
+                    } else {
+                        Toast.makeText(context, "Error al guardar los datos del usuario.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                // Error de registro
+                Toast.makeText(context, "Error al crear la cuenta: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+}
+
+private fun guardarEmailEnSharedPreferences(context: Context, email: String) {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.putString("emailSesion", email)
+    editor.apply()
+}
+
+
+
+//No se utilizará "guardarUsuarioEnSharedPreferences", ya que se reemplazara por persistencia con Firebase con método "guardarUsuario"
+/*
 private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, correo: String, contrasena: String) {
     //Validar que los campos no estén vacíos
     if (nombre.isBlank() || correo.isBlank() || contrasena.isBlank()) {
@@ -294,6 +358,5 @@ private fun guardarUsuarioEnSharedPreferences(context: Context, nombre: String, 
         builder.show()
     }
 }
-
-
+*/
 

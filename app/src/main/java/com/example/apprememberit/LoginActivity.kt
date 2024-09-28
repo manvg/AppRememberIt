@@ -44,6 +44,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,12 +53,23 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.apprememberit.ViewModel.Usuario
+import com.example.apprememberit.ViewModel.UsuarioSesion
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.auth.FirebaseAuth
+
+private lateinit var auth: FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        //Firebase Authentication
+        auth = FirebaseAuth.getInstance()
+
         setContent{
             Login()
         }
@@ -68,14 +81,20 @@ class LoginActivity : AppCompatActivity() {
 fun Login() {
     val context = LocalContext.current
 
-    // Verificar si el usuario tiene una sesión activa
-    val usuarioSesion = getUsuarioSesion(context)
+    var usuarioSesion by remember { mutableStateOf<UsuarioSesion?>(null) }
 
-    if (usuarioSesion != null && usuarioSesion.isActive) {
-        // Si el usuario está activo, redirigir a MainActivity
-        val intent = Intent(context, MainActivity::class.java)
-        context.startActivity(intent)
-        return
+    LaunchedEffect(Unit) {
+        val email = getEmailSesionLocal(context)
+        if (!email.isNullOrEmpty()) {
+            getUsuarioSesionFirebase(context, email) { session ->
+                usuarioSesion = session
+
+                if (usuarioSesion != null && usuarioSesion!!.isActive) {
+                    val intent = Intent(context, MainActivity::class.java)
+                    context.startActivity(intent)
+                }
+            }
+        }
     }
 
     var email by rememberSaveable { mutableStateOf("") }
@@ -223,8 +242,66 @@ fun Login() {
     }
 }
 
-
 private fun iniciarSesion(context: Context, email: String, contrasena: String) {
+    if (email.isBlank() || contrasena.isBlank()) {
+        Toast.makeText(context, "El correo y la contraseña son obligatorios.", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    //Firebase Authentication para iniciar sesión
+    auth.signInWithEmailAndPassword(email, contrasena)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val user = auth.currentUser
+
+                //Guardar el email de sesión localmente
+                guardarEmailSesionLocal(context, email)
+
+                //Redirigir a MainActivity
+                val intent = Intent(context, MainActivity::class.java)
+                context.startActivity(intent)
+                Toast.makeText(context, "Bienvenido, ${user?.email}", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Correo o contraseña incorrectos.", Toast.LENGTH_LONG).show()
+            }
+        }.addOnFailureListener {
+            Toast.makeText(context, "Error al iniciar sesión: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+}
+
+private fun guardarEmailSesionLocal(context: Context, email: String) {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.putString("emailSesion", email)
+    editor.apply()
+}
+
+private fun getEmailSesionLocal(context: Context): String? {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    return sharedPreferences.getString("emailSesion", null)
+}
+
+private fun getUsuarioSesionFirebase(context: Context, email: String, onResult: (UsuarioSesion?) -> Unit) {
+    val database = FirebaseDatabase.getInstance()
+    val ref = database.getReference("usuarioSesion").child(email.replace(".", ","))
+
+    //Obtener la sesión del usuario desde Firebase Realtime Database
+    ref.get().addOnSuccessListener { dataSnapshot ->
+        if (dataSnapshot.exists()) {
+            val usuarioSesion = dataSnapshot.getValue(UsuarioSesion::class.java)
+            onResult(usuarioSesion)
+        } else {
+            onResult(null)
+        }
+    }.addOnFailureListener { exception ->
+        Toast.makeText(context, "Error al obtener la sesión: ${exception.message}", Toast.LENGTH_LONG).show()
+        onResult(null)
+    }
+}
+
+
+/*
+private fun iniciarSesion_SharedPreferences(context: Context, email: String, contrasena: String) {
     //Validar que los campos de correo y contraseña no estén vacíos
     if (email.isBlank() || contrasena.isBlank()) {
         Toast.makeText(context, "El correo y la contraseña son obligatorios.", Toast.LENGTH_LONG).show()
@@ -272,16 +349,10 @@ private fun iniciarSesion(context: Context, email: String, contrasena: String) {
         editor.apply()
     }
 }
+*/
 
-
-data class UsuarioSesion(
-    val nombre: String,
-    val email: String,
-    val contrasena: String,
-    val isActive: Boolean
-)
-
-private fun getUsuarioSesion(context: Context): UsuarioSesion? {
+/*
+private fun getUsuarioSesion_SharedPreferences(context: Context): UsuarioSesion? {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val gson = Gson()
 
@@ -293,3 +364,4 @@ private fun getUsuarioSesion(context: Context): UsuarioSesion? {
         gson.fromJson(usuarioSesionJson, UsuarioSesion::class.java)
     }
 }
+*/

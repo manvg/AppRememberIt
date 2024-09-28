@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,11 +66,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.example.apprememberit.ViewModel.RecordatorioViewModel
+import com.example.apprememberit.ViewModel.UsuarioSesion
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,16 +97,23 @@ fun Dashboard() {
     var mostrarNuevoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var mensajeBienvenida by remember { mutableStateOf("Bienvenido") }
 
-    val usuarioSesion = getUsuarioSesion(context)
+    // Obtener el usuario autenticado desde Firebase Authentication
+    val usuarioActual = FirebaseAuth.getInstance().currentUser
 
-    if (usuarioSesion != null) {
-        mensajeBienvenida = "Hola, ${usuarioSesion.nombre}"
+    //Obtener el email directamente desde FirebaseAuth
+    val emailUsuario = usuarioActual?.email
+
+    //Actualizar el mensaje de bienvenida si el usuario está autenticado
+    LaunchedEffect(usuarioActual) {
+        if (usuarioActual != null) {
+            mensajeBienvenida = "Hola, ${usuarioActual.displayName ?: emailUsuario ?: "Usuario"}"
+        }
     }
 
-    // Filtrar los recordatorios dependiendo del estado de la sesión. Ordenar por fecha
+    //Usar el email del usuario autenticado para obtener los recordatorios
     val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
-    val recordatorios = if (usuarioSesion != null) {
-        viewModel.obtenerRecordatoriosPorEmail(usuarioSesion.email)
+    val recordatorios = if (emailUsuario != null) {
+        viewModel.obtenerRecordatoriosPorEmail(emailUsuario)
     } else {
         viewModel.obtenerRecordatoriosPorEmail(null)
     }.sortedBy { recordatorio ->
@@ -178,7 +189,16 @@ fun Dashboard() {
                     AbrirMenu(
                         context = context,
                         onLogout = {
-                            cerrarSesion(context)
+                            // Obtener el email del usuario desde SharedPreferences
+                            val email = obtenerEmailDeSharedPreferences(context)
+
+                            if (!email.isNullOrEmpty()) {
+                                cerrarSesion(context) // Pasar el email al cerrar la sesión
+                            } else {
+                                Toast.makeText(context, "Error al obtener el email del usuario", Toast.LENGTH_LONG).show()
+                            }
+
+                            //Redirigir al LoginActivity
                             val intent = Intent(context, LoginActivity::class.java)
                             context.startActivity(intent)
                         },
@@ -191,6 +211,7 @@ fun Dashboard() {
                             context.startActivity(intent)
                         }
                     )
+
                 }
             }
 
@@ -274,7 +295,7 @@ fun Dashboard() {
             NuevoRecordatorioDialog(
                 onDismiss = { mostrarNuevoRecordatorio = false },
                 viewModel = viewModel,
-                emailUsuario = usuarioSesion?.email,
+                emailUsuario = emailUsuario,
                 onSave = {
                     mostrarNuevoRecordatorio = false
                 }
@@ -734,19 +755,20 @@ fun NuevoRecordatorioDialog(
 
 //----------Menú "Ajustes"----------//
 @Composable
-fun AbrirMenu(context: Context, onLogout: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit
+fun AbrirMenu(
+    context: Context,
+    onLogout: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)//Obtener datos almacenados localmente
-    val gson = Gson()
-    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)//Datos sesión usuario
-    val usuarioSesion = usuarioSesionJson?.let {
-        gson.fromJson(it, UsuarioSesion::class.java)
-    }
 
-    //Las opciones a mostrar en el menú dependen del estado de la sesión.
-    //1)Usuario activo, muestra "Cerrar sesión".
-    //2)Sin usuario activo, muestra las opciones "Crear cuenta" e "Iniciar sesión"
+    // Obtener el usuario actual desde Firebase Authentication
+    val usuarioActual = FirebaseAuth.getInstance().currentUser
+
+    // Las opciones a mostrar en el menú dependen del estado de la sesión.
+    // 1) Usuario activo, muestra "Cerrar sesión".
+    // 2) Sin usuario activo, muestra las opciones "Crear cuenta" e "Iniciar sesión"
     Column(
         modifier = Modifier
             .padding(top = 12.dp, bottom = 12.dp, start = 200.dp)
@@ -776,22 +798,24 @@ fun AbrirMenu(context: Context, onLogout: () -> Unit, onLogin: () -> Unit, onReg
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            if (usuarioSesion != null && usuarioSesion.isActive) {
+            //Si el usuario está autenticado, mostrar la opción de "Cerrar sesión"
+            if (usuarioActual != null) {
                 DropdownMenuItem(onClick = {
-                    onLogout()
+                    onLogout() // Cerrar sesión
                     expanded = false
                 }) {
                     Text("Cerrar sesión")
                 }
             } else {
+                //Si no hay usuario autenticado, mostrar "Crear cuenta" e "Iniciar sesión"
                 DropdownMenuItem(onClick = {
-                    onRegister()
+                    onRegister() //Ir a pantalla de registro
                     expanded = false
                 }) {
                     Text("Crear cuenta")
                 }
                 DropdownMenuItem(onClick = {
-                    onLogin()
+                    onLogin() //Ir a pantalla de inicio de sesión
                     expanded = false
                 }) {
                     Text("Iniciar sesión")
@@ -802,6 +826,31 @@ fun AbrirMenu(context: Context, onLogout: () -> Unit, onLogin: () -> Unit, onReg
 }
 
 //----------Métodos privados----------//
+private fun cerrarSesion(context: Context) {
+    //Cerrar sesión con Firebase Authentication
+    FirebaseAuth.getInstance().signOut()
+
+    //Eliminar el email de SharedPreferences
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.remove("emailSesion") // Eliminar el email guardado
+    editor.apply()
+
+    Toast.makeText(context, "Sesión cerrada correctamente.", Toast.LENGTH_LONG).show()
+
+    //Redirigir a LoginActivity
+    val intent = Intent(context, LoginActivity::class.java)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    context.startActivity(intent)
+}
+
+//Obtener el email de SharedPreferences
+private fun obtenerEmailDeSharedPreferences(context: Context): String? {
+    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
+    return sharedPreferences.getString("emailSesion", null)
+}
+
+/*
 private fun cerrarSesion(context: Context) {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     val editor = sharedPreferences.edit()
@@ -828,5 +877,5 @@ private fun getUsuarioSesion(context: Context): UsuarioSesion? {
         gson.fromJson(usuarioSesionJson, UsuarioSesion::class.java)
     }
 }
-
+*/
 
