@@ -264,9 +264,10 @@ private fun iniciarSesion(context: Context, email: String, contrasena: String) {
             } else {
                 Toast.makeText(context, "Correo o contraseña incorrectos.", Toast.LENGTH_LONG).show()
             }
-        }.addOnFailureListener {
-            Toast.makeText(context, "Error al iniciar sesión: ${it.message}", Toast.LENGTH_LONG).show()
         }
+        /*.addOnFailureListener {
+            Toast.makeText(context, "Error al iniciar sesión: ${it.message}", Toast.LENGTH_LONG).show()
+        }*/
 }
 
 private fun guardarEmailSesionLocal(context: Context, email: String) {
@@ -282,22 +283,23 @@ private fun getEmailSesionLocal(context: Context): String? {
 }
 
 private fun getUsuarioSesionFirebase(context: Context, email: String, onResult: (UsuarioSesion?) -> Unit) {
-    val database = FirebaseDatabase.getInstance()
-    val ref = database.getReference("usuarioSesion").child(email.replace(".", ","))
+    val auth = FirebaseAuth.getInstance()
+    val usuarioActual = auth.currentUser
 
-    //Obtener la sesión del usuario desde Firebase Realtime Database
-    ref.get().addOnSuccessListener { dataSnapshot ->
-        if (dataSnapshot.exists()) {
-            val usuarioSesion = dataSnapshot.getValue(UsuarioSesion::class.java)
-            onResult(usuarioSesion)
-        } else {
-            onResult(null)
-        }
-    }.addOnFailureListener { exception ->
-        Toast.makeText(context, "Error al obtener la sesión: ${exception.message}", Toast.LENGTH_LONG).show()
+    // Verificar si hay un usuario autenticado
+    if (usuarioActual != null && usuarioActual.email == email) {
+        val usuarioSesion = UsuarioSesion(
+            nombre = usuarioActual.displayName ?: "",
+            email = usuarioActual.email ?: "",
+            contrasena = "",
+            isActive = true
+        )
+        onResult(usuarioSesion)
+    } else {
         onResult(null)
     }
 }
+
 
 
 /*

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
-import com.example.apprememberit.Recordatorio
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 

@@ -65,15 +65,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import com.example.apprememberit.ViewModel.RecordatorioViewModel
-import com.example.apprememberit.ViewModel.UsuarioSesion
 import com.google.firebase.auth.FirebaseAuth
-import com.google.gson.Gson
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.example.apprememberit.ViewModel.FirebaseViewModel;
+import com.example.apprememberit.ViewModel.Recordatorio
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,8 +85,8 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun Dashboard() {
     val context = LocalContext.current
-    val viewModel: RecordatorioViewModel = remember {
-        RecordatorioViewModel(context)
+    val viewModel: FirebaseViewModel = remember {
+        FirebaseViewModel(context)
     }
 
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
@@ -97,27 +94,43 @@ fun Dashboard() {
     var mostrarNuevoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var mensajeBienvenida by remember { mutableStateOf("Bienvenido") }
 
-    // Obtener el usuario autenticado desde Firebase Authentication
     val usuarioActual = FirebaseAuth.getInstance().currentUser
-
-    //Obtener el email directamente desde FirebaseAuth
     val emailUsuario = usuarioActual?.email
 
-    //Actualizar el mensaje de bienvenida si el usuario está autenticado
-    LaunchedEffect(usuarioActual) {
-        if (usuarioActual != null) {
-            mensajeBienvenida = "Hola, ${usuarioActual.displayName ?: emailUsuario ?: "Usuario"}"
+    val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
+    var recordatorios by rememberSaveable { mutableStateOf(listOf<Recordatorio>()) }
+
+    fun refrescarRecordatorios() {
+        if (emailUsuario != null) {
+            obtenerRecordatoriosDesdeFirebase(context, emailUsuario, viewModel) { listaRecordatorios ->
+                recordatorios = listaRecordatorios.sortedBy { recordatorio ->
+                    try {
+                        LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error al formatear fecha u hora", Toast.LENGTH_LONG).show()
+                        LocalDateTime.now()
+                    }
+                }
+            }
         }
     }
 
-    //Usar el email del usuario autenticado para obtener los recordatorios
-    val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
-    val recordatorios = if (emailUsuario != null) {
-        viewModel.obtenerRecordatoriosPorEmail(emailUsuario)
-    } else {
-        viewModel.obtenerRecordatoriosPorEmail(null)
-    }.sortedBy { recordatorio ->
-        LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
+    //Inicializa el mensaje de bienvenida y los recordatorios
+    LaunchedEffect(emailUsuario) {
+        if (emailUsuario != null) {
+            viewModel.obtenerUsuarioPorEmail(emailUsuario) { usuario, errorMessage ->
+                if (usuario != null) {
+                    mensajeBienvenida = "Hola, ${usuario.nombre}"
+                } else {
+                    mensajeBienvenida = "Hola, $emailUsuario"
+                    errorMessage?.let {
+                        Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        refrescarRecordatorios()
     }
 
     Box(
@@ -189,7 +202,6 @@ fun Dashboard() {
                     AbrirMenu(
                         context = context,
                         onLogout = {
-                            // Obtener el email del usuario desde SharedPreferences
                             val email = obtenerEmailDeSharedPreferences(context)
 
                             if (!email.isNullOrEmpty()) {
@@ -211,7 +223,6 @@ fun Dashboard() {
                             context.startActivity(intent)
                         }
                     )
-
                 }
             }
 
@@ -226,7 +237,6 @@ fun Dashboard() {
                     .fillMaxWidth()
                     .padding(16.dp)
             )
-
 
             if (recordatorios.isEmpty()) {
                 //Mostrar mensaje cuando no haya recordatorios
@@ -264,7 +274,7 @@ fun Dashboard() {
                 }
             }
 
-            //Edición recordatorio
+            //Editar recordatorio
             recordatorioEditando?.let { recordatorio ->
                 EditRecordatorioDialog(
                     recordatorio = recordatorio,
@@ -272,22 +282,32 @@ fun Dashboard() {
                     viewModel = viewModel,
                     onSave = {
                         recordatorioEditando = null
+                        refrescarRecordatorios()
                     }
                 )
             }
 
-            //Eliminación recordatorio
+            //Eliminar recordatorio
             recordatorioAEliminar?.let { recordatorio ->
                 ConfirmDeleteDialog(
+                    recordatorio = recordatorio,
                     onConfirm = {
-                        viewModel.eliminarRecordatorio(recordatorio)
-                        recordatorioAEliminar = null
+                        viewModel.eliminarRecordatorio(recordatorio) { success, errorMessage ->
+                            if (success) {
+                                Toast.makeText(context, "Recordatorio eliminado correctamente", Toast.LENGTH_LONG).show()
+                                refrescarRecordatorios()
+                            } else {
+                                Toast.makeText(context, "Error al eliminar: $errorMessage", Toast.LENGTH_LONG).show()
+                            }
+                            recordatorioAEliminar = null
+                        }
                     },
                     onDismiss = {
                         recordatorioAEliminar = null
                     }
                 )
             }
+
         }
 
         //Nuevo recordatorio
@@ -298,10 +318,12 @@ fun Dashboard() {
                 emailUsuario = emailUsuario,
                 onSave = {
                     mostrarNuevoRecordatorio = false
+                    refrescarRecordatorios()
                 }
             )
         }
-        //Botón "Nuevo" para agregar recordatorios
+
+        //Botón "+ Nuevo" para agregar recordatorios
         ExtendedFloatingActionButton(
             onClick = {
                 mostrarNuevoRecordatorio = true
@@ -333,9 +355,8 @@ fun Dashboard() {
 }
 
 
-//----------Panel de recordatorios----------//
-data class Recordatorio(val titulo: String, val descripcion: String, val fecha: String, val hora: String, val emailUsuario: String)
 
+//----------Panel de recordatorios----------//
 @Composable
 fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: () -> Unit) {
     Card(
@@ -386,15 +407,14 @@ fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: (
 
 //----------Dialog "Confirmar Eliminación"----------//
 @Composable
-fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit)
-{
+fun ConfirmDeleteDialog(recordatorio: Recordatorio, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(text = "Confirmar Eliminación", fontSize = 27.sp, color = Color.Red)
         },
         text = {
-            Text(text = "¿Está seguro de que desea eliminar este recordatorio?",fontSize = 20.sp)
+            Text(text = "¿Está seguro de que desea eliminar el recordatorio \"${recordatorio.titulo}\"?", fontSize = 20.sp)
         },
         confirmButton = {
             Button(
@@ -414,13 +434,12 @@ fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit)
 
 //----------Dialog "Editar Recordatorio"----------//
 @Composable
-fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, viewModel: RecordatorioViewModel, onSave: () -> Unit)
-{
-    var categoriaSeleccionada by rememberSaveable { mutableStateOf(recordatorio.titulo) } // Inicializa con el título original
+fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, viewModel: FirebaseViewModel, onSave: () -> Unit) {
+    var categoriaSeleccionada by rememberSaveable { mutableStateOf(recordatorio.titulo) }
     var descripcion by rememberSaveable { mutableStateOf(recordatorio.descripcion) }
     var fecha by rememberSaveable { mutableStateOf(recordatorio.fecha) }
     var hora by rememberSaveable { mutableStateOf(recordatorio.hora) }
-    var expanded by remember { mutableStateOf(false) } // Control del Dropdown
+    var expanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
@@ -460,9 +479,10 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 //Selector de categorías de recordatorios
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expanded = !expanded }
                 ) {
                     TextField(
                         value = categoriaSeleccionada,
@@ -483,7 +503,7 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        viewModel.categorias.forEach { categoria -> //Obtener categorías desde ViewModel
+                        viewModel.categorias.forEach { categoria ->
                             DropdownMenuItem(onClick = {
                                 categoriaSeleccionada = categoria
                                 expanded = false
@@ -502,7 +522,7 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Campo "Fecha"
+                //Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = { },
@@ -512,9 +532,9 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            datePickerDialog.show()//Mostrar el selector de fecha
+                            datePickerDialog.show()
                         },
-                    isError = fecha.isBlank()//Mostrar error si no se ha seleccionado fecha
+                    isError = fecha.isBlank()
                 )
 
                 //Campo "Hora"
@@ -527,9 +547,9 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            timePickerDialog.show()// Mostrar el selector de hora
+                            timePickerDialog.show()
                         },
-                    isError = hora.isBlank() //Mostrar error si no se ha seleccionado hora
+                    isError = hora.isBlank()
                 )
             }
         },
@@ -542,8 +562,14 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                         fecha = fecha,
                         hora = hora
                     )
-                    viewModel.actualizarRecordatorio(recordatorio, nuevoRecordatorio) //Modificar recordatorio
-                    onSave()
+                    viewModel.actualizarRecordatorio(recordatorio, nuevoRecordatorio) { success, errorMessage ->
+                        if (success) {
+                            Toast.makeText(context, "Recordatorio actualizado correctamente", Toast.LENGTH_LONG).show()
+                            onSave()
+                        } else {
+                            Toast.makeText(context, "Error al actualizar: $errorMessage", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
@@ -559,10 +585,7 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                     contentColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
                 )
             ) {
-                Text(
-                    text = "Cancelar",
-                    color = Color(android.graphics.Color.parseColor("#Ea6d35"))
-                )
+                Text(text = "Cancelar", color = Color(android.graphics.Color.parseColor("#Ea6d35")))
             }
         }
     )
@@ -570,12 +593,7 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
 
 //----------Dialog "Nuevo Recordatorio"----------//
 @Composable
-fun NuevoRecordatorioDialog(
-    onDismiss: () -> Unit,
-    viewModel: RecordatorioViewModel,
-    emailUsuario: String?,
-    onSave: () -> Unit
-) {
+fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel, emailUsuario: String?, onSave: () -> Unit) {
     var categoriaSeleccionada by rememberSaveable { mutableStateOf("Seleccione") }
     var descripcion by rememberSaveable { mutableStateOf("") }
     var fecha by rememberSaveable { mutableStateOf("") }
@@ -644,7 +662,7 @@ fun NuevoRecordatorioDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        viewModel.categorias.forEach { categoria -> //Obtener categorías desde ViewModel
+                        viewModel.categorias.forEach { categoria ->
                             DropdownMenuItem(onClick = {
                                 categoriaSeleccionada = categoria
                                 expanded = false
@@ -661,37 +679,37 @@ fun NuevoRecordatorioDialog(
                     onValueChange = { descripcion = it },
                     label = { Text(text = "Descripción") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = descripcion.isBlank() // Mostrar error si está vacío
+                    isError = descripcion.isBlank()
                 )
 
-                // Campo "Fecha"
+                //Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
-                    onValueChange = { },
+                    onValueChange = {},
                     label = { Text(text = "Fecha") },
                     readOnly = true,
                     enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            datePickerDialog.show()//Mostrar el selector de fecha
+                            datePickerDialog.show()
                         },
-                    isError = fecha.isBlank()//Mostrar error si no se ha seleccionado fecha
+                    isError = fecha.isBlank()
                 )
 
                 //Campo "Hora"
                 OutlinedTextField(
                     value = hora,
-                    onValueChange = { },
+                    onValueChange = {},
                     label = { Text(text = "Hora") },
                     readOnly = true,
                     enabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            timePickerDialog.show()// Mostrar el selector de hora
+                            timePickerDialog.show()
                         },
-                    isError = hora.isBlank() //Mostrar error si no se ha seleccionado hora
+                    isError = hora.isBlank()
                 )
 
                 //Mostrar mensaje de error si hay algún campo inválido
@@ -707,7 +725,7 @@ fun NuevoRecordatorioDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    // Validar que todos los campos sean válidos
+                    //Validar que todos los campos sean válidos
                     if (categoriaSeleccionada == "Seleccione") {
                         errorMessage = "Debe seleccionar una categoría."
                     } else if (descripcion.isBlank()) {
@@ -717,17 +735,25 @@ fun NuevoRecordatorioDialog(
                     } else if (hora.isBlank()) {
                         errorMessage = "Debe seleccionar una hora."
                     } else {
-                        // Todos los campos son válidos, guardar el recordatorio
                         errorMessage = ""
                         val nuevoRecordatorio = Recordatorio(
+                            id = viewModel.generarId(),
                             titulo = categoriaSeleccionada,
                             descripcion = descripcion,
                             fecha = fecha,
                             hora = hora,
                             emailUsuario = emailUsuario ?: ""
                         )
-                        viewModel.agregarRecordatorio(nuevoRecordatorio)
-                        onSave() // Guardar
+                        //Agregar el recordatorio a Firebase
+                        viewModel.agregarRecordatorio(nuevoRecordatorio) { success, errorMessage ->
+                            if (success) {
+                                Toast.makeText(context, "Recordatorio guardado correctamente", Toast.LENGTH_LONG).show()
+                                onSave()
+                            } else {
+                                Toast.makeText(context, "Error al guardar: $errorMessage", Toast.LENGTH_LONG).show()
+                            }
+                        }
+
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -755,12 +781,7 @@ fun NuevoRecordatorioDialog(
 
 //----------Menú "Ajustes"----------//
 @Composable
-fun AbrirMenu(
-    context: Context,
-    onLogout: () -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit
-) {
+fun AbrirMenu(context: Context, onLogout: () -> Unit, onLogin: () -> Unit, onRegister: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     // Obtener el usuario actual desde Firebase Authentication
@@ -843,6 +864,25 @@ private fun cerrarSesion(context: Context) {
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     context.startActivity(intent)
 }
+
+fun obtenerRecordatoriosDesdeFirebase(context: Context, emailUsuario: String?, viewModel: FirebaseViewModel, onResult: (List<Recordatorio>) -> Unit
+) {
+    val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
+
+    if (emailUsuario != null) {
+        viewModel.obtenerRecordatoriosPorEmail(emailUsuario) { listaRecordatorios, errorMessage ->
+            if (errorMessage == null) {
+                val recordatoriosOrdenados = listaRecordatorios.sortedBy { recordatorio ->
+                    LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
+                }
+                onResult(recordatoriosOrdenados)
+            } else {
+                Toast.makeText(context, "Error: $errorMessage", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+}
+
 
 //Obtener el email de SharedPreferences
 private fun obtenerEmailDeSharedPreferences(context: Context): String? {
