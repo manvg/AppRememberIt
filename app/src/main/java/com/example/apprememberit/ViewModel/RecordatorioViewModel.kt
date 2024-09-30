@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.util.UUID
 
 class RecordatorioViewModel(context: Context) : ViewModel() {
 
@@ -59,6 +60,14 @@ class RecordatorioViewModel(context: Context) : ViewModel() {
         } else {
             recordatorios.filter { it.emailUsuario == email }
         }
+    }
+
+    fun generarId(): String {
+        return UUID.randomUUID().toString()
+    }
+
+    fun obtenerRecordatoriosSinCuenta(): List<Recordatorio> {
+        return recordatorios.filter { it.emailUsuario.isNullOrEmpty() }
     }
 
     // Lista de categorías de recordatorios

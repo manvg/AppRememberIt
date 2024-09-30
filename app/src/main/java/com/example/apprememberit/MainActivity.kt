@@ -69,8 +69,10 @@ import com.google.firebase.auth.FirebaseAuth
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import com.example.apprememberit.ViewModel.FirebaseViewModel;
+import com.example.apprememberit.ViewModel.FirebaseViewModel
 import com.example.apprememberit.ViewModel.Recordatorio
+import com.example.apprememberit.ViewModel.RecordatorioViewModel
+import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,9 +87,10 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun Dashboard() {
     val context = LocalContext.current
-    val viewModel: FirebaseViewModel = remember {
-        FirebaseViewModel(context)
-    }
+
+    //Se utilizan 2 Viewmodels, uno para Firebase (usuarios con cuenta) y otro para SharedPreferences (usuarios sin cuenta)
+    val firebaseViewModel: FirebaseViewModel = remember { FirebaseViewModel(context) }
+    val recordatorioViewModel: RecordatorioViewModel = remember { RecordatorioViewModel(context) }
 
     var recordatorioEditando by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
     var recordatorioAEliminar by rememberSaveable { mutableStateOf<Recordatorio?>(null) }
@@ -97,28 +100,46 @@ fun Dashboard() {
     val usuarioActual = FirebaseAuth.getInstance().currentUser
     val emailUsuario = usuarioActual?.email
 
+    //Uso de SharedPreferences si no hay usuario autenticado
+    val usandoSharedPreferences = emailUsuario == null
+
+    //Generar un UUID temporal si no hay usuario autenticado
+    var uuidSinCuenta by rememberSaveable { mutableStateOf<String?>(null) }
+
+    if (emailUsuario == null && uuidSinCuenta == null) {
+        uuidSinCuenta = UUID.randomUUID().toString()
+    }
+
+    val identificadorUsuario = emailUsuario ?: uuidSinCuenta
+
     val formatter = DateTimeFormatter.ofPattern("d/M/yyyy H:mm")
     var recordatorios by rememberSaveable { mutableStateOf(listOf<Recordatorio>()) }
 
+    //Refrescar los recordatorios, usa Firebase o SharedPreferences según el estado del usuario
     fun refrescarRecordatorios() {
-        if (emailUsuario != null) {
-            obtenerRecordatoriosDesdeFirebase(context, emailUsuario, viewModel) { listaRecordatorios ->
-                recordatorios = listaRecordatorios.sortedBy { recordatorio ->
-                    try {
-                        LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Error al formatear fecha u hora", Toast.LENGTH_LONG).show()
-                        LocalDateTime.now()
+        if (!usandoSharedPreferences) {
+            //Si el usuario está autenticado, usamos Firebase
+            identificadorUsuario?.let { userId ->
+                obtenerRecordatoriosDesdeFirebase(context, userId, firebaseViewModel) { listaRecordatorios ->
+                    recordatorios = listaRecordatorios.sortedBy { recordatorio ->
+                        try {
+                            LocalDateTime.parse("${recordatorio.fecha} ${recordatorio.hora}", formatter)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error al formatear fecha u hora", Toast.LENGTH_LONG).show()
+                            LocalDateTime.now()
+                        }
                     }
                 }
             }
+        } else {
+            recordatorios = recordatorioViewModel.obtenerRecordatoriosSinCuenta()
         }
     }
 
-    //Inicializa el mensaje de bienvenida y los recordatorios
-    LaunchedEffect(emailUsuario) {
+    //Mensaje de bienvenida y los recordatorios
+    LaunchedEffect(identificadorUsuario) {
         if (emailUsuario != null) {
-            viewModel.obtenerUsuarioPorEmail(emailUsuario) { usuario, errorMessage ->
+            firebaseViewModel.obtenerUsuarioPorEmail(emailUsuario) { usuario, errorMessage ->
                 if (usuario != null) {
                     mensajeBienvenida = "Hola, ${usuario.nombre}"
                 } else {
@@ -128,6 +149,8 @@ fun Dashboard() {
                     }
                 }
             }
+        } else {
+            mensajeBienvenida = "Bienvenido/a"
         }
 
         refrescarRecordatorios()
@@ -138,10 +161,7 @@ fun Dashboard() {
             .fillMaxSize()
             .background(color = Color(android.graphics.Color.parseColor("#f8eeec")))
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-        ) {
+        Column(Modifier.fillMaxSize()) {
             ConstraintLayout {
                 val (topImg, profile) = createRefs()
                 Box(
@@ -199,15 +219,20 @@ fun Dashboard() {
                             end.linkTo(parent.end)
                         }
                 ) {
+                    //Menú
                     AbrirMenu(
                         context = context,
                         onLogout = {
                             val email = obtenerEmailDeSharedPreferences(context)
 
                             if (!email.isNullOrEmpty()) {
-                                cerrarSesion(context) // Pasar el email al cerrar la sesión
+                                cerrarSesion(context)
                             } else {
-                                Toast.makeText(context, "Error al obtener el email del usuario", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    context,
+                                    "Error al obtener el email del usuario",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
 
                             //Redirigir al LoginActivity
@@ -228,6 +253,7 @@ fun Dashboard() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            //Título
             Text(
                 text = "Tus Recordatorios",
                 fontSize = 24.sp,
@@ -238,8 +264,8 @@ fun Dashboard() {
                     .padding(16.dp)
             )
 
+            //Mostrar lista de recordatorios o mensaje de no hay recordatorios
             if (recordatorios.isEmpty()) {
-                //Mostrar mensaje cuando no haya recordatorios
                 Text(
                     text = "No tienes recordatorios. ¡Agrega uno nuevo!",
                     fontSize = 18.sp,
@@ -250,14 +276,11 @@ fun Dashboard() {
                         .align(Alignment.CenterHorizontally)
                 )
             } else {
-                //Mostrar la lista de recordatorios si existen
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentPadding = PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp
-                    ),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(recordatorios) { recordatorio ->
@@ -279,7 +302,9 @@ fun Dashboard() {
                 EditRecordatorioDialog(
                     recordatorio = recordatorio,
                     onDismiss = { recordatorioEditando = null },
-                    viewModel = viewModel,
+                    emailUsuario = emailUsuario,
+                    firebaseViewModel = if (!usandoSharedPreferences) firebaseViewModel else null,
+                    recordatorioViewModel = if (usandoSharedPreferences) recordatorioViewModel else null,
                     onSave = {
                         recordatorioEditando = null
                         refrescarRecordatorios()
@@ -287,35 +312,42 @@ fun Dashboard() {
                 )
             }
 
+
             //Eliminar recordatorio
             recordatorioAEliminar?.let { recordatorio ->
                 ConfirmDeleteDialog(
                     recordatorio = recordatorio,
                     onConfirm = {
-                        viewModel.eliminarRecordatorio(recordatorio) { success, errorMessage ->
-                            if (success) {
-                                Toast.makeText(context, "Recordatorio eliminado correctamente", Toast.LENGTH_LONG).show()
-                                refrescarRecordatorios()
-                            } else {
-                                Toast.makeText(context, "Error al eliminar: $errorMessage", Toast.LENGTH_LONG).show()
+                        if (usandoSharedPreferences) {
+                            //Eliminar desde SharedPreferences
+                            recordatorioViewModel.eliminarRecordatorio(recordatorio)
+                            Toast.makeText(context, "Recordatorio eliminado correctamente", Toast.LENGTH_LONG).show()
+                        } else {
+                            //Eliminar desde Firebase
+                            firebaseViewModel.eliminarRecordatorio(recordatorio) { success, errorMessage ->
+                                if (success) {
+                                    Toast.makeText(context, "Recordatorio eliminado correctamente", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Error al eliminar: $errorMessage", Toast.LENGTH_LONG).show()
+                                }
                             }
-                            recordatorioAEliminar = null
                         }
+                        refrescarRecordatorios()
+                        recordatorioAEliminar = null
                     },
                     onDismiss = {
                         recordatorioAEliminar = null
                     }
                 )
             }
-
         }
-
         //Nuevo recordatorio
         if (mostrarNuevoRecordatorio) {
             NuevoRecordatorioDialog(
                 onDismiss = { mostrarNuevoRecordatorio = false },
-                viewModel = viewModel,
-                emailUsuario = emailUsuario,
+                firebaseViewModel = if (!usandoSharedPreferences) firebaseViewModel else null,  // Pasar firebaseViewModel si no se usan SharedPreferences
+                recordatorioViewModel = if (usandoSharedPreferences) recordatorioViewModel else null,  // Pasar recordatorioViewModel si se usan SharedPreferences
+                emailUsuario = if (usandoSharedPreferences) null else emailUsuario,  // Enviar null si se usan SharedPreferences
                 onSave = {
                     mostrarNuevoRecordatorio = false
                     refrescarRecordatorios()
@@ -325,9 +357,7 @@ fun Dashboard() {
 
         //Botón "+ Nuevo" para agregar recordatorios
         ExtendedFloatingActionButton(
-            onClick = {
-                mostrarNuevoRecordatorio = true
-            },
+            onClick = { mostrarNuevoRecordatorio = true },
             backgroundColor = Color(android.graphics.Color.parseColor("#EA6D35")),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -353,8 +383,6 @@ fun Dashboard() {
         )
     }
 }
-
-
 
 //----------Panel de recordatorios----------//
 @Composable
@@ -407,7 +435,11 @@ fun RecordatorioCard(recordatorio: Recordatorio, onDelete: () -> Unit, onEdit: (
 
 //----------Dialog "Confirmar Eliminación"----------//
 @Composable
-fun ConfirmDeleteDialog(recordatorio: Recordatorio, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmDeleteDialog(
+    recordatorio: Recordatorio,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit // La lógica de eliminación se pasa desde fuera
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -418,7 +450,7 @@ fun ConfirmDeleteDialog(recordatorio: Recordatorio, onConfirm: () -> Unit, onDis
         },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = onConfirm, // Se delega la acción de confirmación afuera
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
             ) {
                 Text(text = "Eliminar", color = Color.White, fontSize = 18.sp)
@@ -432,9 +464,9 @@ fun ConfirmDeleteDialog(recordatorio: Recordatorio, onConfirm: () -> Unit, onDis
     )
 }
 
-//----------Dialog "Editar Recordatorio"----------//
 @Composable
-fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, viewModel: FirebaseViewModel, onSave: () -> Unit) {
+fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, emailUsuario: String?, firebaseViewModel: FirebaseViewModel?, recordatorioViewModel: RecordatorioViewModel?, onSave: () -> Unit
+) {
     var categoriaSeleccionada by rememberSaveable { mutableStateOf(recordatorio.titulo) }
     var descripcion by rememberSaveable { mutableStateOf(recordatorio.descripcion) }
     var fecha by rememberSaveable { mutableStateOf(recordatorio.fecha) }
@@ -503,7 +535,7 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        viewModel.categorias.forEach { categoria ->
+                        (firebaseViewModel?.categorias ?: recordatorioViewModel?.categorias)?.forEach { categoria ->
                             DropdownMenuItem(onClick = {
                                 categoriaSeleccionada = categoria
                                 expanded = false
@@ -562,13 +594,23 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
                         fecha = fecha,
                         hora = hora
                     )
-                    viewModel.actualizarRecordatorio(recordatorio, nuevoRecordatorio) { success, errorMessage ->
-                        if (success) {
-                            Toast.makeText(context, "Recordatorio actualizado correctamente", Toast.LENGTH_LONG).show()
-                            onSave()
-                        } else {
-                            Toast.makeText(context, "Error al actualizar: $errorMessage", Toast.LENGTH_LONG).show()
+
+                    // Validar si el usuario tiene cuenta o no
+                    if (emailUsuario != null) {
+                        // Usuario con cuenta, utilizar Firebase
+                        firebaseViewModel?.actualizarRecordatorio(recordatorio, nuevoRecordatorio) { success, errorMessage ->
+                            if (success) {
+                                Toast.makeText(context, "Recordatorio actualizado correctamente", Toast.LENGTH_LONG).show()
+                                onSave()
+                            } else {
+                                Toast.makeText(context, "Error al actualizar: $errorMessage", Toast.LENGTH_LONG).show()
+                            }
                         }
+                    } else {
+                        // Usuario sin cuenta, utilizar SharedPreferences
+                        recordatorioViewModel?.actualizarRecordatorio(recordatorio, nuevoRecordatorio)
+                        Toast.makeText(context, "Recordatorio actualizado correctamente", Toast.LENGTH_LONG).show()
+                        onSave()
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -593,7 +635,8 @@ fun EditRecordatorioDialog(recordatorio: Recordatorio, onDismiss: () -> Unit, vi
 
 //----------Dialog "Nuevo Recordatorio"----------//
 @Composable
-fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel, emailUsuario: String?, onSave: () -> Unit) {
+fun NuevoRecordatorioDialog(onDismiss: () -> Unit, firebaseViewModel: FirebaseViewModel?, recordatorioViewModel: RecordatorioViewModel?, emailUsuario: String?, onSave: () -> Unit
+) {
     var categoriaSeleccionada by rememberSaveable { mutableStateOf("Seleccione") }
     var descripcion by rememberSaveable { mutableStateOf("") }
     var fecha by rememberSaveable { mutableStateOf("") }
@@ -638,7 +681,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                //Selector de categorías de recordatorios
+                // Selector de categorías de recordatorios
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
@@ -662,7 +705,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        viewModel.categorias.forEach { categoria ->
+                        (firebaseViewModel?.categorias ?: recordatorioViewModel?.categorias ?: emptyList()).forEach { categoria ->
                             DropdownMenuItem(onClick = {
                                 categoriaSeleccionada = categoria
                                 expanded = false
@@ -673,7 +716,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     }
                 }
 
-                //Campo "Descripción"
+                // Campo "Descripción"
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -682,7 +725,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     isError = descripcion.isBlank()
                 )
 
-                //Campo "Fecha"
+                // Campo "Fecha"
                 OutlinedTextField(
                     value = fecha,
                     onValueChange = {},
@@ -697,7 +740,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     isError = fecha.isBlank()
                 )
 
-                //Campo "Hora"
+                // Campo "Hora"
                 OutlinedTextField(
                     value = hora,
                     onValueChange = {},
@@ -712,7 +755,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     isError = hora.isBlank()
                 )
 
-                //Mostrar mensaje de error si hay algún campo inválido
+                // Mostrar mensaje de error si hay algún campo inválido
                 if (errorMessage.isNotBlank()) {
                     Text(
                         text = errorMessage,
@@ -725,7 +768,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
         confirmButton = {
             Button(
                 onClick = {
-                    //Validar que todos los campos sean válidos
+                    // Validar que todos los campos sean válidos
                     if (categoriaSeleccionada == "Seleccione") {
                         errorMessage = "Debe seleccionar una categoría."
                     } else if (descripcion.isBlank()) {
@@ -737,23 +780,30 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     } else {
                         errorMessage = ""
                         val nuevoRecordatorio = Recordatorio(
-                            id = viewModel.generarId(),
+                            id = if (firebaseViewModel != null) firebaseViewModel.generarId() else null,
                             titulo = categoriaSeleccionada,
                             descripcion = descripcion,
                             fecha = fecha,
                             hora = hora,
                             emailUsuario = emailUsuario ?: ""
                         )
-                        //Agregar el recordatorio a Firebase
-                        viewModel.agregarRecordatorio(nuevoRecordatorio) { success, errorMessage ->
-                            if (success) {
-                                Toast.makeText(context, "Recordatorio guardado correctamente", Toast.LENGTH_LONG).show()
-                                onSave()
-                            } else {
-                                Toast.makeText(context, "Error al guardar: $errorMessage", Toast.LENGTH_LONG).show()
-                            }
-                        }
 
+                        if (firebaseViewModel != null) {
+                            // Agregar el recordatorio a Firebase
+                            firebaseViewModel.agregarRecordatorio(nuevoRecordatorio) { success, errorMessage ->
+                                if (success) {
+                                    Toast.makeText(context, "Recordatorio guardado correctamente", Toast.LENGTH_LONG).show()
+                                    onSave()
+                                } else {
+                                    Toast.makeText(context, "Error al guardar: $errorMessage", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        } else if (recordatorioViewModel != null) {
+                            // Agregar el recordatorio en SharedPreferences
+                            recordatorioViewModel.agregarRecordatorio(nuevoRecordatorio)
+                            Toast.makeText(context, "Recordatorio guardado correctamente", Toast.LENGTH_LONG).show()
+                            onSave()
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -770,10 +820,7 @@ fun NuevoRecordatorioDialog(onDismiss: () -> Unit, viewModel: FirebaseViewModel,
                     contentColor = Color(android.graphics.Color.parseColor("#Ea6d35"))
                 )
             ) {
-                Text(
-                    text = "Cancelar",
-                    color = Color(android.graphics.Color.parseColor("#Ea6d35"))
-                )
+                Text(text = "Cancelar", color = Color(android.graphics.Color.parseColor("#Ea6d35")))
             }
         }
     )

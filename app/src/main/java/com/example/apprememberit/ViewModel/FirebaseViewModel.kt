@@ -54,13 +54,11 @@ class FirebaseViewModel(context: Context) : ViewModel() {
     }
 
     fun eliminarRecordatorio(recordatorio: Recordatorio, onResult: (Boolean, String) -> Unit) {
-        // Asegurarse de que el recordatorio tiene un id válido
         if (recordatorio.id.isNullOrEmpty()) {
             onResult(false, "Error: El recordatorio no tiene un ID válido")
             return
         }
 
-        // Referenciar el nodo basado en el id del recordatorio
         val ref = database.child(recordatorio.id!!)
         ref.removeValue().addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -73,14 +71,12 @@ class FirebaseViewModel(context: Context) : ViewModel() {
         }
     }
 
-
     fun actualizarRecordatorio(recordatorioAntiguo: Recordatorio, recordatorioNuevo: Recordatorio, onResult: (Boolean, String) -> Unit) {
         if (recordatorioAntiguo.id.isNullOrEmpty()) {
             onResult(false, "No se puede actualizar: el recordatorio no tiene un ID válido")
             return
         }
 
-        // Buscar el recordatorio por su ID en lugar de por el título
         val ref = database.child(recordatorioAntiguo.id!!)
         ref.setValue(recordatorioNuevo).addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -93,11 +89,12 @@ class FirebaseViewModel(context: Context) : ViewModel() {
         }
     }
 
-
     fun obtenerRecordatoriosPorEmail(email: String?, onResult: (List<Recordatorio>, String?) -> Unit) {
         val recordatoriosFiltrados = mutableListOf<Recordatorio>()
+
+        //Aquí ajustamos la lógica para diferenciar usuarios registrados de los no registrados
         val query = if (email.isNullOrEmpty()) {
-            database.orderByChild("emailUsuario").equalTo(null)
+            database.orderByChild("emailUsuario").equalTo("no_registrado")
         } else {
             database.orderByChild("emailUsuario").equalTo(email)
         }
@@ -110,7 +107,7 @@ class FirebaseViewModel(context: Context) : ViewModel() {
                         recordatoriosFiltrados.add(it)
                     }
                 }
-                onResult(recordatoriosFiltrados, null) // Éxito
+                onResult(recordatoriosFiltrados, null)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -120,26 +117,20 @@ class FirebaseViewModel(context: Context) : ViewModel() {
     }
 
     fun obtenerUsuarioPorEmail(email: String, onResult: (Usuario?, String?) -> Unit) {
-        // Inicializa la base de datos
         val database = FirebaseDatabase.getInstance().getReference("usuarios")
-
-        // Crea la consulta para buscar al usuario por su email
         val query = database.orderByChild("email").equalTo(email)
 
-        // Ejecuta la consulta
         query.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                // Si el snapshot existe, se encontró un usuario
                 if (snapshot.exists()) {
                     for (usuarioSnapshot in snapshot.children) {
                         val usuario = usuarioSnapshot.getValue(Usuario::class.java)
                         usuario?.let {
-                            onResult(it, null) // Éxito: se encontró el usuario
+                            onResult(it, null)
                             return
                         }
                     }
                 } else {
-                    // No se encontró ningún usuario con ese email
                     onResult(null, "No se encontró ningún usuario con el email $email")
                 }
             }
@@ -150,9 +141,7 @@ class FirebaseViewModel(context: Context) : ViewModel() {
         })
     }
 
-
-
-    // Lista de categorías de recordatorios
+    //Lista de categorías de recordatorios
     val categorias = listOf(
         "Seleccione",
         "Medicamentos",
