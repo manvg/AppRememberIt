@@ -5,7 +5,11 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +78,16 @@ import com.example.apprememberit.ViewModel.FirebaseViewModel
 import com.example.apprememberit.ViewModel.Recordatorio
 import com.example.apprememberit.ViewModel.RecordatorioViewModel
 import java.util.UUID
+import android.Manifest
+import android.app.Activity
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.Snackbar
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,8 +150,68 @@ fun Dashboard() {
             recordatorios = recordatorioViewModel.obtenerRecordatoriosSinCuenta()
         }
     }
+    //---------- Reconocimiento de voz ----------//
 
-    //Mensaje de bienvenida y los recordatorios
+    //Snackbar para visualizar mensajes del reconocimiento de voz
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
+    val reconocimientoVozHelper = remember {
+        ReconocimientoVozHelper(
+            context = context,
+            onResult = { recognizedText ->
+                snackbarMessage = recognizedText
+                showSnackbar = true
+
+                coroutineScope.launch {
+                    delay(5000)
+                    showSnackbar = false
+                }
+
+                //Nuevo recordatorio
+                if (recognizedText.equals("Agregar recordatorio", ignoreCase = true) ||
+                    recognizedText.equals("Nuevo recordatorio", ignoreCase = true) ||
+                    recognizedText.equals("Agregar", ignoreCase = true) ||
+                    recognizedText.equals("Nuevo", ignoreCase = true)) {
+
+                    mostrarNuevoRecordatorio = true
+                    Toast.makeText(context, "Abriendo Nuevo Recordatorio", Toast.LENGTH_SHORT).show()
+                }
+
+                //Cerrar aplicación
+                if (recognizedText.equals("Salir", ignoreCase = true) ||
+                    recognizedText.equals("Cerrar", ignoreCase = true) ||
+                    recognizedText.equals("Cerrar aplicación", ignoreCase = true)) {
+
+                    Toast.makeText(context, "Cerrando aplicación...", Toast.LENGTH_SHORT).show()
+
+                    //Cerrar aplicación
+                    (context as Activity).finishAffinity()
+                    exitProcess(0)
+                }
+            },
+            onError = {
+                snackbarMessage = "Error al reconocer voz"
+                showSnackbar = true
+
+                coroutineScope.launch {
+                    delay(5000)
+                    showSnackbar = false
+                }
+            },
+            onListening = {
+                snackbarMessage = "Escuchando..."
+                showSnackbar = true
+            },
+            onProcessing = {
+                snackbarMessage = "Procesando..."
+                showSnackbar = true
+            }
+        )
+    }
+
+    //---------- Mensaje de bienvenida y panel de recordatorios ----------//
     LaunchedEffect(identificadorUsuario) {
         if (emailUsuario != null) {
             firebaseViewModel.obtenerUsuarioPorEmail(emailUsuario) { usuario, errorMessage ->
@@ -297,7 +372,7 @@ fun Dashboard() {
                 }
             }
 
-            //Editar recordatorio
+            //---------- Editar recordatorio ----------//
             recordatorioEditando?.let { recordatorio ->
                 EditRecordatorioDialog(
                     recordatorio = recordatorio,
@@ -313,7 +388,7 @@ fun Dashboard() {
             }
 
 
-            //Eliminar recordatorio
+            ///---------- Eliminar recordatorio ----------//
             recordatorioAEliminar?.let { recordatorio ->
                 ConfirmDeleteDialog(
                     recordatorio = recordatorio,
@@ -341,7 +416,7 @@ fun Dashboard() {
                 )
             }
         }
-        //Nuevo recordatorio
+        //---------- Nuevo Recordatorio ----------//
         if (mostrarNuevoRecordatorio) {
             NuevoRecordatorioDialog(
                 onDismiss = { mostrarNuevoRecordatorio = false },
@@ -355,7 +430,39 @@ fun Dashboard() {
             )
         }
 
-        //Botón "+ Nuevo" para agregar recordatorios
+        //---------- Botón "Hablar" para reconocimiento de voz ----------//
+        ExtendedFloatingActionButton(
+            onClick = {
+                snackbarMessage = "Escuchando..."
+                showSnackbar = true
+                //Verificar permiso para usar el micrófono
+                reconocimientoVozHelper.startListening()
+            },
+            backgroundColor = Color(android.graphics.Color.parseColor("#3b608c")),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+                .height(56.dp)
+                .width(160.dp)
+                .offset(x = (-180).dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Hablar",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
+                )
+            },
+            text = {
+                Text(
+                    text = "Hablar",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    modifier = Modifier.padding(start = 0.dp)
+                )
+            }
+        )
+        //---------- Botón "+ Nuevo" para agregar recordatorios ----------//
         ExtendedFloatingActionButton(
             onClick = { mostrarNuevoRecordatorio = true },
             backgroundColor = Color(android.graphics.Color.parseColor("#EA6D35")),
@@ -381,8 +488,36 @@ fun Dashboard() {
                 )
             }
         )
+        //---------- Snackbar para mostrar el estado de reconocimiento de voz ----------//
+        if (showSnackbar) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .shadow(6.dp, RoundedCornerShape(16.dp))
+                    .background(
+                        color = Color.Black.copy(alpha = 0.8f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+            ) {
+                Snackbar(
+                    modifier = Modifier.padding(8.dp),
+                    content = {
+                        Text(
+                            text = snackbarMessage,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+            }
+        }
+
     }
 }
+
 
 //----------Panel de recordatorios----------//
 @Composable
@@ -936,33 +1071,4 @@ private fun obtenerEmailDeSharedPreferences(context: Context): String? {
     val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
     return sharedPreferences.getString("emailSesion", null)
 }
-
-/*
-private fun cerrarSesion(context: Context) {
-    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
-    val editor = sharedPreferences.edit()
-
-    editor.remove("usuarioSesion")
-    editor.apply()
-
-    Toast.makeText(context, "Sesión cerrada correctamente.", Toast.LENGTH_LONG).show()
-
-    val intent = Intent(context, LoginActivity::class.java)
-    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-    context.startActivity(intent)
-}
-
-private fun getUsuarioSesion(context: Context): UsuarioSesion? {
-    val sharedPreferences = context.getSharedPreferences("datosApp", Context.MODE_PRIVATE)
-    val gson = Gson()
-
-    val usuarioSesionJson = sharedPreferences.getString("usuarioSesion", null)
-
-    return if (usuarioSesionJson == null) {
-        null
-    } else {
-        gson.fromJson(usuarioSesionJson, UsuarioSesion::class.java)
-    }
-}
-*/
 
